@@ -1,0 +1,81 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import joblib
+import numpy as np
+import os
+
+app = Flask(__name__)
+CORS(app)
+
+model = joblib.load("model.pkl")
+le = joblib.load("label_encoder.pkl")
+
+# Per-fruit, per-condition shelf life and risk
+SHELF_LIFE = {
+    "banana": {"Fresh": "4-6 days", "Ripening": "1-2 days", "Spoiling": "< 12 hours"},
+    "tomato": {"Fresh": "5-7 days", "Ripening": "2-3 days", "Spoiling": "< 24 hours"},
+}
+RISK_LEVEL = {
+    "Fresh": "Low",
+    "Ripening": "Medium",
+    "Spoiling": "High",
+}
+FRUIT_TYPE_MAP = {"banana": 0, "tomato": 1}
+
+REQUIRED_FIELDS = ["fruit_type", "temperature", "humidity", "gas", "storage_time", "temp_delta"]
+
+@app.route("/predict", methods=["POST"])
+def predict():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON body received"}), 400
+
+        missing = [f for f in REQUIRED_FIELDS if f not in data or data[f] is None]
+        if missing:
+            return jsonify({"error": f"Missing fields: {missing}"}), 400
+
+        fruit_name = str(data["fruit_type"]).lower()
+        if fruit_name not in FRUIT_TYPE_MAP:
+            return jsonify({"error": "fruit_type must be 'banana' or 'tomato'"}), 400
+
+        try:
+            features = np.array([[
+                FRUIT_TYPE_MAP[fruit_name],
+                float(data["temperature"]),
+                float(data["humidity"]),
+                float(data["gas"]),
+                float(data["storage_time"]),
+                float(data["temp_delta"]),
+            ]])
+        except (ValueError, TypeError) as e:
+            return jsonify({"error": f"Invalid numeric value: {str(e)}"}), 400
+
+        pred_encoded = model.predict(features)[0]
+        proba = model.predict_proba(features)[0]
+        condition = le.inverse_transform([pred_encoded])[0]
+
+        return jsonify({
+            "fruit_type": fruit_name,
+            "condition": condition,
+            "risk_level": RISK_LEVEL[condition],
+            "shelf_life": SHELF_LIFE[fruit_name][condition],
+            "confidence": round(float(max(proba)) * 100, 1),
+            "probabilities": {
+                cls: round(float(p) * 100, 1)
+                for cls, p in zip(le.classes_, proba)
+            },
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ML service running"})
+
+
+if __name__ == "__main__":
+    debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
+    app.run(port=5001, debug=debug)
