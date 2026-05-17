@@ -1,6 +1,8 @@
+require("dotenv").config();
 const db = require("../config/firebase");
 const axios = require("axios");
-require("dotenv").config();
+
+const ML_URL = "http://localhost:5001";
 
 // Per-fruit thresholds: upper AND lower bounds
 const THRESHOLDS = {
@@ -114,7 +116,7 @@ const getPrediction = async (req, res) => {
       : (latest.external_temperature || latest.temperature) - latest.temperature;
 
     const mlRes = await axios.post(
-      `${process.env.ML_SERVICE_URL}/predict`,
+      `${ML_URL}/predict`,
       {
         fruit_type:   fruit,
         temperature:  latest.temperature,
@@ -133,7 +135,7 @@ const getPrediction = async (req, res) => {
 const getManualPrediction = async (req, res) => {
   try {
     const { fruit_type, temperature, humidity, gas, storage_time, temp_delta } = req.body;
-    const mlRes = await axios.post(`${process.env.ML_SERVICE_URL}/predict`, {
+    const mlRes = await axios.post(`${ML_URL}/predict`, {
       fruit_type,
       temperature,
       humidity,

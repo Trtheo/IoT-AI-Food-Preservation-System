@@ -271,9 +271,10 @@ export default function Graphs() {
       )}
 
       <div className="flex flex-col gap-6">
-        {metrics.map((metric, i) => (
-          <MetricChart key={metric.key} metric={metric} records={records} chartRef={refs[i]} />
-        ))}
+        {metrics.map((metric, i) => {
+          const ref = refs[i];
+          return <MetricChart key={metric.key} metric={metric} records={records} chartRef={ref} />;
+        })}
       </div>
     </div>
   );
