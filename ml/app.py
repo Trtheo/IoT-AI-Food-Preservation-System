@@ -76,6 +76,18 @@ def health():
     return jsonify({"status": "ML service running"})
 
 
+@app.route("/features", methods=["GET"])
+def feature_importance():
+    features = ["fruit_type", "temperature", "humidity", "gas", "storage_time", "temp_delta"]
+    importance = model.feature_importances_
+    return jsonify({
+        "features": [
+            {"name": f, "importance": round(float(i) * 100, 1)}
+            for f, i in sorted(zip(features, importance), key=lambda x: -x[1])
+        ]
+    })
+
+
 if __name__ == "__main__":
     debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     app.run(port=5001, debug=debug)

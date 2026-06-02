@@ -21,7 +21,7 @@ export default function Alerts() {
   }, [fruit]);
 
   const fn = useCallback(() => fetchAlerts(limit), [limit]);
-  const { data, loading, refreshing, error, refetch } = useFetch(fn, 10000);
+  const { data, loading, refreshing, error, refetch } = useFetch(fn, 2000);
 
   if (loading) return <Loader />;
 
@@ -123,29 +123,45 @@ export default function Alerts() {
       ) : (
         <>
           <div className="flex flex-col gap-3 mb-5">
-            {paged.map((alert, i) => (
-              <div key={i} className="bg-red-50 border border-red-200 rounded-2xl p-4">
+            {paged.map((alert, i) => {
+              const isChilling = alert.messages.some((m) => m.toLowerCase().includes("chilling"));
+              return (
+              <div key={i} className={`border rounded-2xl p-4 ${
+                isChilling
+                  ? "bg-blue-50 border-blue-300"
+                  : "bg-red-50 border-red-200"
+              }`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle size={15} className="text-red-500" />
+                  <AlertTriangle size={15} className={isChilling ? "text-blue-500" : "text-red-500"} />
                   <span className="text-xs text-gray-400">
                     {new Date(alert.timestamp).toLocaleString()}
                   </span>
+                  {isChilling && (
+                    <span className="text-xs bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
+                      Chilling Injury
+                    </span>
+                  )}
                   {alert.fruit_type && (
                     <span className="ml-auto text-xs capitalize bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
                       {alert.fruit_type}
                     </span>
                   )}
                 </div>
-                <ul className="text-sm text-red-700 space-y-1 pl-1">
+                <ul className={`text-sm space-y-1 pl-1 ${
+                  isChilling ? "text-blue-700" : "text-red-700"
+                }`}>
                   {alert.messages.map((msg, j) => (
                     <li key={j} className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+                      <span className={`w-1.5 h-1.5 rounded-full inline-block ${
+                        isChilling ? "bg-blue-400" : "bg-red-400"
+                      }`} />
                       {msg}
                     </li>
                   ))}
                 </ul>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Pagination */}

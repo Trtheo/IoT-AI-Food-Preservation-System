@@ -9,10 +9,8 @@ const links = [
   { to: "/alerts",     label: "Alerts",     icon: Bell      },
 ];
 
-const FRUITS = ["banana", "tomato"];
-
 export default function Navbar() {
-  const { fruit, setFruit } = useFruit();
+  const { fruit } = useFruit();
 
   return (
     <nav className="bg-green-800 text-white px-6 py-4 flex items-center justify-between shadow-lg">
@@ -39,21 +37,9 @@ export default function Navbar() {
         ))}
       </div>
 
-      {/* Fruit selector */}
-      <div className="flex items-center gap-1 bg-green-900 rounded-xl p-1">
-        {FRUITS.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFruit(f)}
-            className={`px-3 py-1 rounded-lg text-sm font-medium capitalize transition-all ${
-              fruit === f
-                ? "bg-white text-green-800 shadow"
-                : "text-green-300 hover:text-white"
-            }`}
-          >
-            {f}
-          </button>
-        ))}
+      {/* Fruit badge - reflects ESP32 button selection */}
+      <div className="bg-green-900 rounded-xl px-4 py-1.5">
+        <span className="text-sm font-medium capitalize text-white">{fruit}</span>
       </div>
     </nav>
   );

@@ -2,81 +2,93 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, accuracy_score
 from sklearn.preprocessing import LabelEncoder
 import joblib
 
 np.random.seed(42)
 
-# --- Banana: climacteric, ethylene-driven, safe at 13-15°C, 85-95% RH ---
-# fruit_type = 0
+N = 500  # samples per class
+
+# ─────────────────────────────────────────────
+# BANANA (fruit_type = 0)
+# Fresh:    13.0–14.8°C | gas 80–148 ppm  | storage  0–47h
+# Ripening: 15.2–18.8°C | gas 152–218 ppm | storage 49–95h
+# Spoiling: 19.2–30.0°C | gas 222–400 ppm | storage 97–168h
+# 0.2°C / 2 ppm gap between classes to avoid boundary confusion
+# ─────────────────────────────────────────────
 banana_fresh = pd.DataFrame({
-    "fruit_type":           [0] * 170,
-    "temperature":          np.random.uniform(13, 15, 170),
-    "humidity":             np.random.uniform(85, 92, 170),
-    "gas":                  np.random.uniform(80, 150, 170),
-    "storage_time":         np.random.uniform(0, 48, 170),
-    "temp_delta":           np.random.uniform(2, 6, 170),
-    "condition":            ["Fresh"] * 170,
+    "fruit_type":   [0] * N,
+    "temperature":  np.random.uniform(13.0, 14.8, N),
+    "humidity":     np.random.uniform(85.0, 92.0, N),
+    "gas":          np.random.uniform(80,   148,   N),
+    "storage_time": np.random.uniform(0,    47,    N),
+    "temp_delta":   np.random.uniform(2.0,  6.0,   N),
+    "condition":    ["Fresh"] * N,
 })
 banana_ripening = pd.DataFrame({
-    "fruit_type":           [0] * 165,
-    "temperature":          np.random.uniform(15, 19, 165),
-    "humidity":             np.random.uniform(88, 95, 165),
-    "gas":                  np.random.uniform(150, 220, 165),
-    "storage_time":         np.random.uniform(48, 96, 165),
-    "temp_delta":           np.random.uniform(4, 9, 165),
-    "condition":            ["Ripening"] * 165,
+    "fruit_type":   [0] * N,
+    "temperature":  np.random.uniform(15.2, 18.8, N),
+    "humidity":     np.random.uniform(88.0, 94.5, N),
+    "gas":          np.random.uniform(152,  218,   N),
+    "storage_time": np.random.uniform(49,   95,    N),
+    "temp_delta":   np.random.uniform(4.0,  9.0,   N),
+    "condition":    ["Ripening"] * N,
 })
 banana_spoiling = pd.DataFrame({
-    "fruit_type":           [0] * 165,
-    "temperature":          np.random.uniform(19, 30, 165),
-    "humidity":             np.random.uniform(92, 99, 165),
-    "gas":                  np.random.uniform(220, 400, 165),
-    "storage_time":         np.random.uniform(96, 168, 165),
-    "temp_delta":           np.random.uniform(6, 14, 165),
-    "condition":            ["Spoiling"] * 165,
+    "fruit_type":   [0] * N,
+    "temperature":  np.random.uniform(19.2, 30.0, N),
+    "humidity":     np.random.uniform(92.0, 99.0, N),
+    "gas":          np.random.uniform(222,  400,   N),
+    "storage_time": np.random.uniform(97,   168,   N),
+    "temp_delta":   np.random.uniform(6.0,  14.0,  N),
+    "condition":    ["Spoiling"] * N,
 })
 
-# --- Tomato: climacteric, chilling injury < 10°C, safe at 10-15°C, 85-90% RH ---
-# fruit_type = 1
+# ─────────────────────────────────────────────
+# TOMATO (fruit_type = 1)
+# Fresh:    10.2–14.8°C | gas 80–148 ppm  | storage  0–71h
+# Ripening: 15.2–19.8°C | gas 152–218 ppm | storage 73–119h
+# Spoiling: 20.2–30.0°C | gas 222–400 ppm | storage 121–200h
+# Chilling: 2.0–9.8°C   | gas 80–180 ppm  | storage 12–96h  → Spoiling
+# ─────────────────────────────────────────────
 tomato_fresh = pd.DataFrame({
-    "fruit_type":           [1] * 170,
-    "temperature":          np.random.uniform(10, 15, 170),
-    "humidity":             np.random.uniform(85, 90, 170),
-    "gas":                  np.random.uniform(80, 150, 170),
-    "storage_time":         np.random.uniform(0, 72, 170),
-    "temp_delta":           np.random.uniform(2, 6, 170),
-    "condition":            ["Fresh"] * 170,
+    "fruit_type":   [1] * N,
+    "temperature":  np.random.uniform(10.2, 14.8, N),
+    "humidity":     np.random.uniform(85.0, 90.0, N),
+    "gas":          np.random.uniform(80,   148,   N),
+    "storage_time": np.random.uniform(0,    71,    N),
+    "temp_delta":   np.random.uniform(2.0,  6.0,   N),
+    "condition":    ["Fresh"] * N,
 })
 tomato_ripening = pd.DataFrame({
-    "fruit_type":           [1] * 165,
-    "temperature":          np.random.uniform(15, 20, 165),
-    "humidity":             np.random.uniform(88, 93, 165),
-    "gas":                  np.random.uniform(150, 220, 165),
-    "storage_time":         np.random.uniform(72, 120, 165),
-    "temp_delta":           np.random.uniform(4, 9, 165),
-    "condition":            ["Ripening"] * 165,
+    "fruit_type":   [1] * N,
+    "temperature":  np.random.uniform(15.2, 19.8, N),
+    "humidity":     np.random.uniform(88.0, 92.5, N),
+    "gas":          np.random.uniform(152,  218,   N),
+    "storage_time": np.random.uniform(73,   119,   N),
+    "temp_delta":   np.random.uniform(4.0,  9.0,   N),
+    "condition":    ["Ripening"] * N,
 })
 tomato_spoiling = pd.DataFrame({
-    "fruit_type":           [1] * 165,
-    "temperature":          np.random.uniform(20, 30, 165),
-    "humidity":             np.random.uniform(90, 99, 165),
-    "gas":                  np.random.uniform(220, 400, 165),
-    "storage_time":         np.random.uniform(120, 200, 165),
-    "temp_delta":           np.random.uniform(6, 14, 165),
-    "condition":            ["Spoiling"] * 165,
+    "fruit_type":   [1] * N,
+    "temperature":  np.random.uniform(20.2, 30.0, N),
+    "humidity":     np.random.uniform(90.0, 99.0, N),
+    "gas":          np.random.uniform(222,  400,   N),
+    "storage_time": np.random.uniform(121,  200,   N),
+    "temp_delta":   np.random.uniform(6.0,  14.0,  N),
+    "condition":    ["Spoiling"] * N,
 })
 
-# Chilling injury: tomato stored below 10°C → Spoiling even with low gas
+# Chilling injury — large sample so model learns this edge case well
 tomato_chilling = pd.DataFrame({
-    "fruit_type":           [1] * 100,
-    "temperature":          np.random.uniform(2, 9.9, 100),
-    "humidity":             np.random.uniform(80, 92, 100),
-    "gas":                  np.random.uniform(80, 180, 100),   # gas looks fine
-    "storage_time":         np.random.uniform(12, 96, 100),
-    "temp_delta":           np.random.uniform(1, 5, 100),
-    "condition":            ["Spoiling"] * 100,                # but it's spoiling
+    "fruit_type":   [1] * N,
+    "temperature":  np.random.uniform(2.0,  9.8,  N),
+    "humidity":     np.random.uniform(80.0, 92.0, N),
+    "gas":          np.random.uniform(80,   180,   N),   # gas looks normal
+    "storage_time": np.random.uniform(12,   96,    N),
+    "temp_delta":   np.random.uniform(1.0,  5.0,   N),
+    "condition":    ["Spoiling"] * N,                    # but it IS spoiling
 })
 
 df = pd.concat([
@@ -94,11 +106,22 @@ y = df["condition_encoded"]
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-model = RandomForestClassifier(n_estimators=100, random_state=42)
+model = RandomForestClassifier(
+    n_estimators=300,
+    max_depth=None,
+    min_samples_split=2,
+    min_samples_leaf=1,
+    max_features="sqrt",
+    random_state=42,
+    n_jobs=-1,
+)
 model.fit(X_train, y_train)
 
-print(classification_report(y_test, model.predict(X_test), target_names=le.classes_))
+y_pred = model.predict(X_test)
+acc = accuracy_score(y_test, y_pred)
+print(f"\nTest Accuracy: {acc * 100:.2f}%\n")
+print(classification_report(y_test, y_pred, target_names=le.classes_))
 
 joblib.dump(model, "model.pkl")
 joblib.dump(le, "label_encoder.pkl")
-print("Model saved: model.pkl  |  Features:", FEATURES)
+print(f"Model saved: model.pkl  |  Samples: {len(df)}  |  Features: {FEATURES}")

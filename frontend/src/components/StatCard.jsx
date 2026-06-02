@@ -8,7 +8,7 @@ export default function StatCard({ label, value, unit, icon: Icon, color, iconCo
         </div>
       </div>
       <div className="text-3xl font-bold">
-        {value ?? "—"}
+        {value ?? "-"}
         <span className="text-lg font-normal ml-1">{unit}</span>
       </div>
     </div>

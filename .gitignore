@@ -1,4 +1,4 @@
-# Firebase credentials — NEVER commit these
+# Firebase credentials - NEVER commit these
 backend/serviceAccountKey.json
 iotproject-d752a-firebase-adminsdk-fbsvc-9d322d1f3d.json
 

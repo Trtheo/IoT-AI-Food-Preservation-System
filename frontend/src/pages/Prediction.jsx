@@ -1,9 +1,9 @@
 import { useCallback, useState, useEffect } from "react";
 import {
   Brain, RefreshCw, CheckCircle, AlertTriangle,
-  XCircle, Clock, Percent, FlaskConical, Timer,
+  XCircle, Clock, Percent, FlaskConical, Timer, BarChart2,
 } from "lucide-react";
-import { fetchPrediction, manualPredict } from "../api";
+import { fetchPrediction, manualPredict, fetchFeatureImportance } from "../api";
 import { useFetch } from "../hooks/useFetch";
 import { useFruit } from "../context/FruitContext";
 import Loader from "../components/Loader";
@@ -24,19 +24,9 @@ const BAR_COLOR = {
   Spoiling: "bg-red-500",
 };
 
-const DEMO = {
-  fruit_type:   "banana",
-  condition:    "Fresh",
-  risk_level:   "Low",
-  shelf_life:   "4-6 days",
-  confidence:   94.2,
-  storage_time: 24,
-  probabilities: { Fresh: 94.2, Ripening: 4.5, Spoiling: 1.3 },
-};
-
 const FORM_DEFAULTS = {
   banana: { temperature: 14, humidity: 88, gas: 120, storage_time: 24, temp_delta: 6 },
-  tomato: { temperature: 12, humidity: 87, gas: 110, storage_time: 36, temp_delta: 5 },
+  tomato: { temperature: 13, humidity: 87, gas: 110, storage_time: 36, temp_delta: 5 },
 };
 
 function ResultCard({ data }) {
@@ -77,7 +67,7 @@ function ResultCard({ data }) {
             <div className="flex justify-center mb-1"><Timer size={16} className="text-gray-400" /></div>
             <p className="text-xs text-gray-500 mb-1">Storage Time</p>
             <p className="text-lg font-bold text-gray-800">
-              {data.storage_time !== undefined ? `${data.storage_time}h` : "—"}
+              {data.storage_time !== undefined ? `${data.storage_time}h` : "-"}
             </p>
           </div>
         </div>
@@ -193,17 +183,77 @@ function ManualForm({ fruit }) {
   );
 }
 
+const FEATURE_COLORS = {
+  temperature:  "#f97316",
+  humidity:     "#3b82f6",
+  gas:          "#8b5cf6",
+  storage_time: "#14b8a6",
+  fruit_type:   "#22c55e",
+  temp_delta:   "#f59e0b",
+};
+
+function FeatureImportanceCard() {
+  const fn = useCallback(() => fetchFeatureImportance(), []);
+  const { data, loading, error } = useFetch(fn);
+
+  if (loading) return (
+    <div className="bg-white rounded-2xl shadow p-5 mt-4">
+      <p className="text-sm text-gray-400">Loading feature importance...</p>
+    </div>
+  );
+
+  if (error || !data) return null;
+
+  return (
+    <div className="bg-white rounded-2xl shadow p-5 mt-4">
+      <div className="flex items-center gap-2 mb-4">
+        <BarChart2 size={18} className="text-green-700" />
+        <h2 className="font-semibold text-gray-700">Model Feature Importance</h2>
+      </div>
+      {data.features.map(({ name, importance }) => (
+        <div key={name} className="mb-3">
+          <div className="flex justify-between text-sm text-gray-600 mb-1">
+            <span className="capitalize">{name.replace("_", " ")}</span>
+            <span>{importance}%</span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-2.5">
+            <div
+              className="h-2.5 rounded-full transition-all duration-700"
+              style={{ width: `${importance}%`, backgroundColor: FEATURE_COLORS[name] ?? "#64748b" }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function Prediction() {
   const { fruit } = useFruit();
   const [mode, setMode] = useState("live");
 
   const fn = useCallback(() => fetchPrediction(fruit), [fruit]);
-  const { data: raw, loading, refreshing, error, refetch } = useFetch(fn, 10000);
+  const { data: raw, loading, refreshing, error, refetch } = useFetch(fn, 2000);
 
   if (loading && mode === "live") return <Loader />;
 
-  const data   = raw ?? DEMO;
-  const isDemo = !raw;
+  if (!raw && mode === "live") return (
+    <div className="max-w-2xl mx-auto p-6">
+      <div className="flex items-center gap-2 mb-6">
+        <Brain size={22} className="text-green-700" />
+        <h1 className="text-2xl font-bold text-green-800">Spoilage Prediction</h1>
+      </div>
+      <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-xl px-4 py-6 flex items-center gap-3">
+        <AlertTriangle size={20} />
+        <div>
+          <p className="font-semibold">Backend not reachable</p>
+          <p className="text-sm mt-0.5">{error ?? "Start the backend or switch to Manual mode."}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const data = raw;
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -213,7 +263,7 @@ export default function Prediction() {
           <h1 className="text-2xl font-bold text-green-800">Spoilage Prediction</h1>
         </div>
         <div className="flex items-center gap-2 bg-gray-100 rounded-xl p-1">
-          {["live", "manual"].map((m) => (
+          {["live", "manual", "model"].map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
@@ -239,19 +289,13 @@ export default function Prediction() {
               {refreshing ? "Refreshing..." : "Refresh"}
             </button>
           </div>
-
-          {isDemo && (
-            <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-xl px-4 py-3 mb-4 flex items-center gap-2 text-sm">
-              <AlertTriangle size={15} />
-              <span>Backend not reachable — showing demo data. {error && `(${error})`}</span>
-            </div>
-          )}
-
           <ResultCard data={data} />
         </>
       )}
 
       {mode === "manual" && <ManualForm fruit={fruit} />}
+
+      {mode === "model" && <FeatureImportanceCard />}
     </div>
   );
 }

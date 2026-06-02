@@ -24,6 +24,10 @@ export function useFetch(fetchFn, interval = null) {
         setError(null);
       } catch (e) {
         setError(e.message);
+        // clear stale data on 404 so UI shows empty state
+        if (e?.response?.status === 404 || e?.message?.includes("404")) {
+          setData(null);
+        }
       } finally {
         setLoading(false);
         if (isManual) setRefreshing(false);

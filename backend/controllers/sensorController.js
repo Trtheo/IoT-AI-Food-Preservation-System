@@ -2,7 +2,7 @@ require("dotenv").config();
 const db = require("../config/firebase");
 const axios = require("axios");
 
-const ML_URL = "http://localhost:5001";
+const ML_URL = process.env.ML_SERVICE_URL || "http://localhost:5001";
 
 // Per-fruit thresholds: upper AND lower bounds
 const THRESHOLDS = {
@@ -26,15 +26,15 @@ function getAlertMessages(r, fruit) {
   const msgs = [];
 
   if (t.temperature.min !== undefined && r.temperature < t.temperature.min)
-    msgs.push(`Low temperature (chilling risk): ${r.temperature}°C — min is ${t.temperature.min}°C`);
+    msgs.push(`Low temperature (chilling risk): ${r.temperature}°C - min is ${t.temperature.min}°C`);
   if (r.temperature > t.temperature.max)
-    msgs.push(`High temperature: ${r.temperature}°C — max is ${t.temperature.max}°C`);
+    msgs.push(`High temperature: ${r.temperature}°C - max is ${t.temperature.max}°C`);
   if (t.humidity.min !== undefined && r.humidity < t.humidity.min)
-    msgs.push(`Low humidity: ${r.humidity}% — min is ${t.humidity.min}%`);
+    msgs.push(`Low humidity: ${r.humidity}% - min is ${t.humidity.min}%`);
   if (r.humidity > t.humidity.max)
-    msgs.push(`High humidity: ${r.humidity}% — max is ${t.humidity.max}%`);
+    msgs.push(`High humidity: ${r.humidity}% - max is ${t.humidity.max}%`);
   if (r.gas > t.gas.max)
-    msgs.push(`High gas level: ${r.gas} ppm — max is ${t.gas.max} ppm`);
+    msgs.push(`High gas level: ${r.gas} ppm - max is ${t.gas.max} ppm`);
 
   return msgs;
 }
@@ -149,4 +149,13 @@ const getManualPrediction = async (req, res) => {
   }
 };
 
-module.exports = { getLatest, getHistory, getAlerts, getPrediction, getManualPrediction };
+const getFeatureImportance = async (req, res) => {
+  try {
+    const mlRes = await axios.get(`${ML_URL}/features`);
+    res.json(mlRes.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = { getLatest, getHistory, getAlerts, getPrediction, getManualPrediction, getFeatureImportance };

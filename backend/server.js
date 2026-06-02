@@ -22,6 +22,6 @@ app.listen(PORT, async () => {
     await axios.get(`${process.env.ML_SERVICE_URL}/health`);
     console.log("ML service: online");
   } catch {
-    console.warn("ML service: OFFLINE — start ml/app.py or predictions will fail");
+    console.warn("ML service: OFFLINE - start ml/app.py or predictions will fail");
   }
 });

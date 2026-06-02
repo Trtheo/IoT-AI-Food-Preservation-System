@@ -62,19 +62,6 @@ function getMetrics(fruit) {
   ];
 }
 
-function generateDemo(count, fruit) {
-  const base = fruit === "tomato"
-    ? { temperature: 12, humidity: 87, gas: 110, temp_delta: 5 }
-    : { temperature: 14, humidity: 88, gas: 120, temp_delta: 6 };
-  return Array.from({ length: count }, (_, i) => ({
-    temperature: +(base.temperature + Math.sin(i * 0.3) * 2 + Math.random()).toFixed(1),
-    humidity:    +(base.humidity    + Math.sin(i * 0.2) * 3 + Math.random()).toFixed(1),
-    gas:         +(base.gas         + Math.sin(i * 0.25) * 15 + Math.random() * 5).toFixed(0),
-    temp_delta:  +(base.temp_delta  + Math.sin(i * 0.15) * 1 + Math.random() * 0.5).toFixed(1),
-    timestamp:   Date.now() - (count - i) * 60000,
-  }));
-}
-
 function SummaryBadge({ label, value, unit, color }) {
   return (
     <div className="flex flex-col items-center px-4 py-2 rounded-xl bg-white shadow-sm border border-gray-100">
@@ -218,7 +205,7 @@ export default function Graphs() {
   const [limit, setLimit] = useState(50);
 
   const fn = useCallback(() => fetchHistory(limit), [limit]);
-  const { data: raw, loading, error } = useFetch(fn, 10000);
+  const { data: raw, loading, error } = useFetch(fn, 2000);
 
   const ref0 = useRef();
   const ref1 = useRef();
@@ -230,8 +217,20 @@ export default function Graphs() {
 
   if (loading) return <Loader />;
 
-  const records = raw?.length ? raw : generateDemo(limit, fruit);
-  const isDemo  = !raw?.length;
+  if (!raw?.length) return (
+    <div className="max-w-5xl mx-auto p-6">
+      <h1 className="text-2xl font-bold text-green-800 mb-4">Historical Trends</h1>
+      <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-xl px-4 py-6 flex items-center gap-3">
+        <AlertTriangle size={20} />
+        <div>
+          <p className="font-semibold">No data available</p>
+          <p className="text-sm mt-0.5">{error ?? "Start the simulator or ESP32 to collect readings."}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const records = raw.filter((r) => !r.fruit_type || r.fruit_type === fruit);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
@@ -239,7 +238,7 @@ export default function Graphs() {
         <div>
           <h1 className="text-2xl font-bold text-green-800">Historical Trends</h1>
           <p className="text-sm text-gray-400 mt-0.5">
-            {records.length} readings · scroll to zoom · drag to pan
+            {records.length} readings for {fruit} · scroll to zoom · drag to pan
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -264,9 +263,9 @@ export default function Graphs() {
         </div>
       </div>
 
-      {isDemo && (
+      {records.length === 0 && (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 rounded-xl px-4 py-3 mb-5 text-sm flex items-center gap-2">
-          <AlertTriangle size={15} /> Backend not reachable — showing demo data. {error && `(${error})`}
+          <AlertTriangle size={15} /> No {fruit} readings found in the last {limit} records.
         </div>
       )}
 

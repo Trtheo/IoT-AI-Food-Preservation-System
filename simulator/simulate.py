@@ -1,5 +1,5 @@
 """
-ESP32 Simulator — pushes fake sensor data to Firebase every 5 seconds.
+ESP32 Simulator - pushes fake sensor data to Firebase every 5 seconds.
 Simulates realistic fruit storage conditions for banana or tomato,
 auto-progressing through Fresh -> Ripening -> Spoiling over time.
 """
@@ -95,13 +95,16 @@ def load_state(fruit):
                 if saved_fruit == fruit:
                     print(f"Resuming from saved state: {saved_scenario.upper()}, storage_time={saved_time}h")
                     return saved_time, saved_scenario, saved_elapsed
-        except Exception:
-            pass
+        except (ValueError, IndexError) as e:
+            print(f"Warning: could not parse state file: {e}")
     return 0.0, "fresh", 0.0
 
 def save_state(fruit, storage_time, scenario, elapsed):
-    with open(STATE_FILE, "w") as f:
-        f.write(f"{fruit}\n{storage_time}\n{scenario}\n{elapsed}")
+    try:
+        with open(STATE_FILE, "w") as f:
+            f.write(f"{fruit}\n{storage_time}\n{scenario}\n{elapsed}")
+    except OSError as e:
+        print(f"Warning: could not save state: {e}")
 
 # --- Main ---
 fruit = select_fruit()

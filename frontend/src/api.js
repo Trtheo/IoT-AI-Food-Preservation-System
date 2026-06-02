@@ -11,3 +11,5 @@ export const fetchPrediction = (fruit) =>
   api.get(`/prediction?fruit_type=${fruit}`).then((r) => r.data);
 export const manualPredict = (payload) =>
   api.post("/predict", payload).then((r) => r.data);
+export const fetchFeatureImportance = () =>
+  api.get("/features").then((r) => r.data);
