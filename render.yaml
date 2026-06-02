@@ -22,5 +22,16 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
     envVars:
-      - key: PORT
-        value: 5001
+  - type: worker
+    name: freshguard-simulator
+    runtime: python
+    rootDir: simulator
+    buildCommand: pip install -r requirements.txt
+    startCommand: python simulate.py
+    envVars:
+      - key: FIREBASE_DATABASE_URL
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      - key: FRUIT_TYPE
+        value: banana

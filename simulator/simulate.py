@@ -12,13 +12,18 @@ import math
 import os
 import sys
 
-SERVICE_ACCOUNT = "../backend/serviceAccountKey.json"
 DATABASE_URL = os.environ.get(
     "FIREBASE_DATABASE_URL",
     "https://iotproject-d752a-default-rtdb.firebaseio.com"
 )
 
-cred = credentials.Certificate(SERVICE_ACCOUNT)
+service_account_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
+if service_account_json:
+    import json
+    cred = credentials.Certificate(json.loads(service_account_json))
+else:
+    cred = credentials.Certificate("../backend/serviceAccountKey.json")
+
 firebase_admin.initialize_app(cred, {"databaseURL": DATABASE_URL})
 ref = db.reference("sensor_data")
 
@@ -45,6 +50,9 @@ SCENARIO_DURATION = {
 }
 
 def select_fruit():
+    fruit = os.environ.get("FRUIT_TYPE", "").lower()
+    if fruit in SUPPORTED_FRUITS:
+        return fruit
     print("Select fruit to simulate:")
     for i, f in enumerate(SUPPORTED_FRUITS, 1):
         print(f"  {i}. {f.capitalize()}")
