@@ -5,6 +5,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn.preprocessing import LabelEncoder
 import joblib
+import os
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 np.random.seed(42)
 
@@ -122,6 +125,6 @@ acc = accuracy_score(y_test, y_pred)
 print(f"\nTest Accuracy: {acc * 100:.2f}%\n")
 print(classification_report(y_test, y_pred, target_names=le.classes_))
 
-joblib.dump(model, "model.pkl")
-joblib.dump(le, "label_encoder.pkl")
+joblib.dump(model, os.path.join(BASE_DIR, "model.pkl"))
+joblib.dump(le, os.path.join(BASE_DIR, "label_encoder.pkl"))
 print(f"Model saved: model.pkl  |  Samples: {len(df)}  |  Features: {FEATURES}")

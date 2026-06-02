@@ -4,11 +4,13 @@ import joblib
 import numpy as np
 import os
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 app = Flask(__name__)
 CORS(app)
 
-model = joblib.load("model.pkl")
-le = joblib.load("label_encoder.pkl")
+model = joblib.load(os.path.join(BASE_DIR, "model.pkl"))
+le = joblib.load(os.path.join(BASE_DIR, "label_encoder.pkl"))
 
 # Per-fruit, per-condition shelf life and risk
 SHELF_LIFE = {
