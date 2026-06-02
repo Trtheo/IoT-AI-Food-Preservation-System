@@ -76,10 +76,10 @@ export default function Home() {
   const unsafe = isUnsafe(data, activeFruit);
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="text-2xl font-bold text-green-800">Storage Overview</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+        <h1 className="text-xl sm:text-2xl font-bold text-green-800">Storage Overview</h1>
         <span className="text-xs bg-green-100 text-green-800 border border-green-300 px-3 py-1 rounded-full capitalize font-medium">
           {activeFruit} {activeFruit !== fruit && <span className="text-gray-400">(sensor)</span>}
         </span>
@@ -98,51 +98,36 @@ export default function Home() {
       {unsafe ? (
         <div className="bg-red-100 border border-red-400 text-red-700 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
           <AlertTriangle size={16} />
-          <span className="font-medium">{getUnsafeReason(data, activeFruit, t)}</span>
+          <span className="font-medium text-sm">{getUnsafeReason(data, activeFruit, t)}</span>
         </div>
       ) : (
         <div className="bg-green-100 border border-green-400 text-green-700 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
           <Wifi size={16} />
-          <span className="font-medium">Storage conditions are safe for {activeFruit}</span>
+          <span className="font-medium text-sm">Storage conditions are safe for {activeFruit}</span>
         </div>
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <StatCard
-          label="Temperature"
-          value={data.temperature}
-          unit="°C"
-          icon={Thermometer}
-          color={cardColor(data.temperature, t.temperature.min, t.temperature.max) ?? "bg-green-600"}
-        />
-        <StatCard
-          label="Humidity"
-          value={data.humidity}
-          unit="%"
-          icon={Droplets}
-          color={cardColor(data.humidity, t.humidity.min, t.humidity.max) ?? "bg-blue-600"}
-        />
-        <StatCard
-          label="Gas Level"
-          value={data.gas}
-          unit="ppm"
-          icon={Wind}
-          color={data.gas > t.gas.max ? "bg-red-500" : "bg-purple-600"}
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <StatCard label="Temperature" value={data.temperature} unit="°C" icon={Thermometer}
+          color={cardColor(data.temperature, t.temperature.min, t.temperature.max) ?? "bg-green-600"} />
+        <StatCard label="Humidity" value={data.humidity} unit="%" icon={Droplets}
+          color={cardColor(data.humidity, t.humidity.min, t.humidity.max) ?? "bg-blue-600"} />
+        <StatCard label="Gas Level" value={data.gas} unit="ppm" icon={Wind}
+          color={data.gas > t.gas.max ? "bg-red-500" : "bg-purple-600"} />
       </div>
 
       {/* Details table */}
-      <div className="bg-white rounded-2xl shadow p-5">
+      <div className="bg-white rounded-2xl shadow p-4 sm:p-5">
         <h2 className="font-semibold text-gray-700 mb-3">Details</h2>
         <table className="w-full text-sm text-gray-600">
           <tbody>
             {[
-              ["Fruit Type",      (data.fruit_type ?? "-").charAt(0).toUpperCase() + (data.fruit_type ?? "").slice(1)],
-              ["Storage Time",    `${data.storage_time ?? "-"} hrs`],
-              ["External Temp",   `${data.external_temperature ?? "-"} °C`],
-              ["Temp Delta",      `${data.temp_delta ?? "-"} °C`],
-              ["Last Updated",    receivedAt ? receivedAt.toLocaleString() : "-"],
+              ["Fruit Type",    (data.fruit_type ?? "-").charAt(0).toUpperCase() + (data.fruit_type ?? "").slice(1)],
+              ["Storage Time", `${data.storage_time ?? "-"} hrs`],
+              ["External Temp", `${data.external_temperature ?? "-"} °C`],
+              ["Temp Delta",    `${data.temp_delta ?? "-"} °C`],
+              ["Last Updated", receivedAt ? receivedAt.toLocaleString() : "-"],
             ].map(([k, v]) => (
               <tr key={k} className="border-b last:border-0">
                 <td className="py-2 font-medium text-gray-500">{k}</td>

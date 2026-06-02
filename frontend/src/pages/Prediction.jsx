@@ -52,7 +52,7 @@ function ResultCard({ data }) {
           <AlertTriangle size={13} /> Risk: {data.risk_level}
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           <div className="bg-gray-50 rounded-xl p-4 text-center">
             <div className="flex justify-center mb-1"><Clock size={16} className="text-gray-400" /></div>
             <p className="text-xs text-gray-500 mb-1">Shelf Life</p>
@@ -142,7 +142,7 @@ function ManualForm({ fruit }) {
         </span>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3 mb-4">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         {fields.map(({ name, label, unit, min, max, step }) => (
           <div key={name}>
             <label className="text-xs text-gray-500 mb-1 block">
@@ -256,18 +256,18 @@ export default function Prediction() {
   const data = raw;
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-2xl mx-auto p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-2">
           <Brain size={22} className="text-green-700" />
-          <h1 className="text-2xl font-bold text-green-800">Spoilage Prediction</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-green-800">Spoilage Prediction</h1>
         </div>
-        <div className="flex items-center gap-2 bg-gray-100 rounded-xl p-1">
+        <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
           {["live", "manual", "model"].map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
-              className={`px-3 py-1 rounded-lg text-sm font-medium capitalize transition-all ${
+              className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium capitalize transition-all ${
                 mode === m ? "bg-white text-green-800 shadow" : "text-gray-500 hover:text-gray-700"
               }`}
             >

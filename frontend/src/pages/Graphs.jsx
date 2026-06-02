@@ -233,24 +233,24 @@ export default function Graphs() {
   const records = raw.filter((r) => !r.fruit_type || r.fruit_type === fruit);
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6">
+      <div className="flex flex-wrap items-start sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-green-800">Historical Trends</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-green-800">Historical Trends</h1>
           <p className="text-sm text-gray-400 mt-0.5">
             {records.length} readings for {fruit} · scroll to zoom · drag to pan
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs capitalize bg-green-100 text-green-700 border border-green-200 px-3 py-1 rounded-full font-medium">
             {fruit}
           </span>
-          <div className="flex gap-2">
+          <div className="flex gap-1 sm:gap-2">
             {LIMITS.map((l) => (
               <button
                 key={l}
                 onClick={() => setLimit(l)}
-                className={`px-4 py-1.5 rounded-xl text-sm font-medium border transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs sm:text-sm font-medium border transition-all ${
                   limit === l
                     ? "bg-green-700 text-white border-green-700 shadow-sm"
                     : "border-gray-200 text-gray-500 hover:bg-gray-50"

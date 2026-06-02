@@ -42,13 +42,13 @@ export default function Alerts() {
   const handleFilterChange = (f) => { setFilterFruit(f); setPage(1); };
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="max-w-2xl mx-auto p-4 sm:p-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2">
           <Bell size={22} className="text-green-700" />
-          <h1 className="text-2xl font-bold text-green-800">Alerts</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-green-800">Alerts</h1>
           {filtered.length > 0 && (
             <span className="text-xs bg-red-100 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">
               {filtered.length} total
