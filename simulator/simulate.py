@@ -11,6 +11,9 @@ import random
 import math
 import os
 import sys
+import json
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 DATABASE_URL = os.environ.get(
     "FIREBASE_DATABASE_URL",
@@ -19,7 +22,6 @@ DATABASE_URL = os.environ.get(
 
 service_account_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
 if service_account_json:
-    import json
     cred = credentials.Certificate(json.loads(service_account_json))
 else:
     cred = credentials.Certificate("../backend/serviceAccountKey.json")
@@ -114,47 +116,51 @@ def save_state(fruit, storage_time, scenario, elapsed):
     except OSError as e:
         print(f"Warning: could not save state: {e}")
 
-# --- Main ---
-fruit = select_fruit()
-storage_time, scenario, scenario_elapsed = load_state(fruit)
-
 INTERVAL  = 5    # seconds between pushes
 TIME_STEP = 0.5  # simulated hours per push
 
-print("=" * 55)
-print(f"  ESP32 Simulator - FreshGuard IoT")
-print(f"  Fruit: {fruit.capitalize()}")
-print(f"  Pushing data to Firebase every {INTERVAL}s")
-print(f"  Press Ctrl+C to stop")
-print("=" * 55)
+# --- Health check server so Render free tier keeps it alive ---
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Simulator running")
+    def log_message(self, *args):
+        pass
 
-try:
+def run_simulator():
+    fruit = select_fruit()
+    storage_time, scenario, scenario_elapsed = load_state(fruit)
+
+    print("=" * 55)
+    print(f"  ESP32 Simulator - FreshGuard IoT")
+    print(f"  Fruit: {fruit.capitalize()}")
+    print(f"  Pushing data to Firebase every {INTERVAL}s")
+    print("=" * 55)
+
     while True:
         reading = get_reading(fruit, storage_time, scenario)
         ref.push(reading)
-
         print(
             f"[{scenario.upper():8s}] "
             f"Temp: {reading['temperature']:5.1f}C  "
             f"Humidity: {reading['humidity']:5.1f}%  "
             f"Gas: {reading['gas']:4d} ppm  "
-            f"Delta: {reading['temp_delta']:4.1f}C  "
-            f"Time: {reading['storage_time']:5.1f}h  "
-            f"-> Firebase OK"
+            f"Time: {reading['storage_time']:5.1f}h"
         )
-
-        storage_time    += TIME_STEP
+        storage_time += TIME_STEP
         scenario_elapsed += TIME_STEP
-
         if scenario_elapsed >= SCENARIO_DURATION[fruit][scenario]:
             old = scenario
             scenario = next_scenario(scenario)
             scenario_elapsed = 0
             if scenario != old:
                 print(f"\n  Condition changed: {old.upper()} -> {scenario.upper()}\n")
-
         save_state(fruit, storage_time, scenario, scenario_elapsed)
         time.sleep(INTERVAL)
 
-except KeyboardInterrupt:
-    print("\nSimulator stopped.")
+thread = threading.Thread(target=run_simulator, daemon=True)
+thread.start()
+
+port = int(os.environ.get("PORT", 8080))
+HTTPServer(("0.0.0.0", port), HealthHandler).serve_forever()

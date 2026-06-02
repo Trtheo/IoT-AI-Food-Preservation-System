@@ -22,7 +22,7 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
     envVars:
-  - type: worker
+  - type: web
     name: freshguard-simulator
     runtime: python
     rootDir: simulator
