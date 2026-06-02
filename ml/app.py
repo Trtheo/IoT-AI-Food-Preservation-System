@@ -5,12 +5,18 @@ import numpy as np
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
+LE_PATH = os.path.join(BASE_DIR, "label_encoder.pkl")
+
+if not os.path.exists(MODEL_PATH) or not os.path.exists(LE_PATH):
+    import subprocess, sys
+    subprocess.run([sys.executable, os.path.join(BASE_DIR, "train.py")], check=True)
 
 app = Flask(__name__)
 CORS(app)
 
-model = joblib.load(os.path.join(BASE_DIR, "model.pkl"))
-le = joblib.load(os.path.join(BASE_DIR, "label_encoder.pkl"))
+model = joblib.load(MODEL_PATH)
+le = joblib.load(LE_PATH)
 
 # Per-fruit, per-condition shelf life and risk
 SHELF_LIFE = {
