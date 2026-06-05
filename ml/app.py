@@ -30,7 +30,7 @@ RISK_LEVEL = {
 }
 FRUIT_TYPE_MAP = {"banana": 0, "tomato": 1}
 
-REQUIRED_FIELDS = ["fruit_type", "temperature", "humidity", "gas", "storage_time", "temp_delta"]
+REQUIRED_FIELDS = ["fruit_type", "temperature", "humidity", "gas", "storage_time", "temp_delta", "heat_load"]
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -55,6 +55,7 @@ def predict():
                 float(data["gas"]),
                 float(data["storage_time"]),
                 float(data["temp_delta"]),
+                float(data["heat_load"]),
             ]])
         except (ValueError, TypeError) as e:
             return jsonify({"error": f"Invalid numeric value: {str(e)}"}), 400
@@ -86,7 +87,7 @@ def health():
 
 @app.route("/features", methods=["GET"])
 def feature_importance():
-    features = ["fruit_type", "temperature", "humidity", "gas", "storage_time", "temp_delta"]
+    features = ["fruit_type", "temperature", "humidity", "gas", "storage_time", "temp_delta", "heat_load"]
     importance = model.feature_importances_
     return jsonify({
         "features": [

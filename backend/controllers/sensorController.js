@@ -21,6 +21,14 @@ const THRESHOLDS = {
 const DEFAULT_FRUIT = "banana";
 const STALE_THRESHOLD_MS = 30000; // 30 seconds
 
+// Newton's Law of Cooling constants
+const COOLING_K    = { banana: 0.05, tomato: 0.04 };
+const SAFE_TEMP    = { banana: 14.0, tomato: 12.0 };
+
+function calcHeatLoad(temp_delta, storage_time) {
+  return Math.round(temp_delta * storage_time * 100) / 100;
+}
+
 function getAlertMessages(r, fruit) {
   const t = THRESHOLDS[fruit] || THRESHOLDS[DEFAULT_FRUIT];
   const msgs = [];
@@ -35,6 +43,12 @@ function getAlertMessages(r, fruit) {
     msgs.push(`High humidity: ${r.humidity}% - max is ${t.humidity.max}%`);
   if (r.gas > t.gas.max)
     msgs.push(`High gas level: ${r.gas} ppm - max is ${t.gas.max} ppm`);
+
+  // Heat load alert
+  const heat_load = r.heat_load ?? calcHeatLoad(r.temp_delta ?? 0, r.storage_time ?? 0);
+  const heatLimit = fruit === "banana" ? 300 : 250;
+  if (heat_load > heatLimit)
+    msgs.push(`High heat load: ${heat_load} kJ/kg - fruit has accumulated too much thermal energy`);
 
   return msgs;
 }
@@ -114,6 +128,7 @@ const getPrediction = async (req, res) => {
     const temp_delta = latest.temp_delta !== undefined
       ? latest.temp_delta
       : (latest.external_temperature || latest.temperature) - latest.temperature;
+    const heat_load = latest.heat_load ?? calcHeatLoad(temp_delta, latest.storage_time || 0);
 
     const mlRes = await axios.post(
       `${ML_URL}/predict`,
@@ -123,7 +138,8 @@ const getPrediction = async (req, res) => {
         humidity:     latest.humidity,
         gas:          latest.gas,
         storage_time: latest.storage_time || 0,
-        temp_delta:   temp_delta,
+        temp_delta,
+        heat_load,
       }
     );
     res.json(mlRes.data);
@@ -135,13 +151,11 @@ const getPrediction = async (req, res) => {
 const getManualPrediction = async (req, res) => {
   try {
     const { fruit_type, temperature, humidity, gas, storage_time, temp_delta } = req.body;
+    const heat_load = req.body.heat_load ?? calcHeatLoad(temp_delta ?? 0, storage_time ?? 0);
     const mlRes = await axios.post(`${ML_URL}/predict`, {
-      fruit_type,
-      temperature,
-      humidity,
-      gas,
-      storage_time,
+      fruit_type, temperature, humidity, gas, storage_time,
       temp_delta: temp_delta ?? 0,
+      heat_load,
     });
     res.json(mlRes.data);
   } catch (err) {

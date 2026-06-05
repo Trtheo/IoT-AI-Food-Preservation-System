@@ -51,7 +51,41 @@ SCENARIO_DURATION = {
     "tomato": {"fresh": 72, "ripening": 48, "spoiling": 999},
 }
 
-def select_fruit():
+# Cooling constant k per fruit (Newton's Law of Cooling)
+# Higher k = faster cooling. Derived from biological data.
+COOLING_K = {"banana": 0.05, "tomato": 0.04}
+
+# Safe target storage temperatures per fruit
+SAFE_TEMP = {"banana": 14.0, "tomato": 12.0}
+
+def calc_heat(fruit, temperature, external_temperature, storage_time):
+    """Newton's Law of Cooling derived heat metrics."""
+    k = COOLING_K[fruit]
+    T_safe = SAFE_TEMP[fruit]
+    temp_delta = round(external_temperature - temperature, 1)
+
+    # Heat load: accumulated thermal energy above safe temp (kJ/kg approx)
+    # Q = m*c*delta_T, normalized: heat_load = temp_delta * storage_time
+    heat_load = round(temp_delta * storage_time, 2)
+
+    # Cooling rate: how fast fruit is losing heat (Newton's Law)
+    # dT/dt = -k * (T - T_ambient)
+    cooling_rate = round(k * abs(temperature - external_temperature), 3)
+
+    # Estimated hours to reach safe temp using Newton's Law:
+    # t = -ln((T_safe - T_ambient) / (T_current - T_ambient)) / k
+    try:
+        ratio = (T_safe - external_temperature) / (temperature - external_temperature)
+        if ratio > 0:
+            time_to_safe = round(-math.log(ratio) / k, 1)
+        else:
+            time_to_safe = 0.0
+    except (ZeroDivisionError, ValueError):
+        time_to_safe = 0.0
+
+    return heat_load, cooling_rate, time_to_safe
+
+
     fruit = os.environ.get("FRUIT_TYPE", "").lower()
     if fruit in SUPPORTED_FRUITS:
         return fruit
@@ -75,6 +109,10 @@ def get_reading(fruit, storage_time, scenario):
     external_temperature = round(temperature + random.uniform(4, 8), 1)
     temp_delta  = round(external_temperature - temperature, 1)
 
+    heat_load, cooling_rate, time_to_safe = calc_heat(
+        fruit, temperature, external_temperature, storage_time
+    )
+
     return {
         "fruit_type":           fruit,
         "temperature":          temperature,
@@ -83,6 +121,9 @@ def get_reading(fruit, storage_time, scenario):
         "storage_time":         round(storage_time, 1),
         "external_temperature": external_temperature,
         "temp_delta":           temp_delta,
+        "heat_load":            heat_load,
+        "cooling_rate":         cooling_rate,
+        "time_to_safe":         time_to_safe,
         "timestamp":            int(time.time() * 1000),
     }
 

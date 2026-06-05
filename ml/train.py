@@ -29,6 +29,8 @@ banana_fresh = pd.DataFrame({
     "temp_delta":   np.random.uniform(2.0,  6.0,   N),
     "condition":    ["Fresh"] * N,
 })
+banana_fresh["heat_load"] = banana_fresh["temp_delta"] * banana_fresh["storage_time"]
+
 banana_ripening = pd.DataFrame({
     "fruit_type":   [0] * N,
     "temperature":  np.random.uniform(15.2, 18.8, N),
@@ -38,6 +40,8 @@ banana_ripening = pd.DataFrame({
     "temp_delta":   np.random.uniform(4.0,  9.0,   N),
     "condition":    ["Ripening"] * N,
 })
+banana_ripening["heat_load"] = banana_ripening["temp_delta"] * banana_ripening["storage_time"]
+
 banana_spoiling = pd.DataFrame({
     "fruit_type":   [0] * N,
     "temperature":  np.random.uniform(19.2, 30.0, N),
@@ -47,6 +51,7 @@ banana_spoiling = pd.DataFrame({
     "temp_delta":   np.random.uniform(6.0,  14.0,  N),
     "condition":    ["Spoiling"] * N,
 })
+banana_spoiling["heat_load"] = banana_spoiling["temp_delta"] * banana_spoiling["storage_time"]
 
 # ─────────────────────────────────────────────
 # TOMATO (fruit_type = 1)
@@ -64,6 +69,8 @@ tomato_fresh = pd.DataFrame({
     "temp_delta":   np.random.uniform(2.0,  6.0,   N),
     "condition":    ["Fresh"] * N,
 })
+tomato_fresh["heat_load"] = tomato_fresh["temp_delta"] * tomato_fresh["storage_time"]
+
 tomato_ripening = pd.DataFrame({
     "fruit_type":   [1] * N,
     "temperature":  np.random.uniform(15.2, 19.8, N),
@@ -73,6 +80,8 @@ tomato_ripening = pd.DataFrame({
     "temp_delta":   np.random.uniform(4.0,  9.0,   N),
     "condition":    ["Ripening"] * N,
 })
+tomato_ripening["heat_load"] = tomato_ripening["temp_delta"] * tomato_ripening["storage_time"]
+
 tomato_spoiling = pd.DataFrame({
     "fruit_type":   [1] * N,
     "temperature":  np.random.uniform(20.2, 30.0, N),
@@ -82,17 +91,18 @@ tomato_spoiling = pd.DataFrame({
     "temp_delta":   np.random.uniform(6.0,  14.0,  N),
     "condition":    ["Spoiling"] * N,
 })
+tomato_spoiling["heat_load"] = tomato_spoiling["temp_delta"] * tomato_spoiling["storage_time"]
 
-# Chilling injury — large sample so model learns this edge case well
 tomato_chilling = pd.DataFrame({
     "fruit_type":   [1] * N,
     "temperature":  np.random.uniform(2.0,  9.8,  N),
     "humidity":     np.random.uniform(80.0, 92.0, N),
-    "gas":          np.random.uniform(80,   180,   N),   # gas looks normal
+    "gas":          np.random.uniform(80,   180,   N),
     "storage_time": np.random.uniform(12,   96,    N),
     "temp_delta":   np.random.uniform(1.0,  5.0,   N),
-    "condition":    ["Spoiling"] * N,                    # but it IS spoiling
+    "condition":    ["Spoiling"] * N,
 })
+tomato_chilling["heat_load"] = tomato_chilling["temp_delta"] * tomato_chilling["storage_time"]
 
 df = pd.concat([
     banana_fresh, banana_ripening, banana_spoiling,
@@ -103,7 +113,7 @@ df = pd.concat([
 le = LabelEncoder()
 df["condition_encoded"] = le.fit_transform(df["condition"])
 
-FEATURES = ["fruit_type", "temperature", "humidity", "gas", "storage_time", "temp_delta"]
+FEATURES = ["fruit_type", "temperature", "humidity", "gas", "storage_time", "temp_delta", "heat_load"]
 X = df[FEATURES]
 y = df["condition_encoded"]
 

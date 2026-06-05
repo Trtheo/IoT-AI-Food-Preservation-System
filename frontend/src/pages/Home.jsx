@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from "react";
-import { Thermometer, Droplets, Wind, AlertTriangle, Wifi } from "lucide-react";
+import { Thermometer, Droplets, Wind, AlertTriangle, Wifi, Flame, Clock } from "lucide-react";
 import { fetchLatest } from "../api";
 import { useFetch } from "../hooks/useFetch";
 import { useFruit } from "../context/FruitContext";
@@ -108,14 +108,27 @@ export default function Home() {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <StatCard label="Temperature" value={data.temperature} unit="°C" icon={Thermometer}
           color={cardColor(data.temperature, t.temperature.min, t.temperature.max) ?? "bg-green-600"} />
         <StatCard label="Humidity" value={data.humidity} unit="%" icon={Droplets}
           color={cardColor(data.humidity, t.humidity.min, t.humidity.max) ?? "bg-blue-600"} />
         <StatCard label="Gas Level" value={data.gas} unit="ppm" icon={Wind}
           color={data.gas > t.gas.max ? "bg-red-500" : "bg-purple-600"} />
+        <StatCard label="Heat Load" value={data.heat_load ?? "—"} unit="kJ/kg" icon={Flame}
+          color={data.heat_load > (activeFruit === "banana" ? 300 : 250) ? "bg-orange-500" : "bg-orange-400"} />
       </div>
+
+      {/* Cooling recommendation (Newton's Law) */}
+      {data.time_to_safe !== undefined && data.time_to_safe > 0 && (
+        <div className="bg-orange-50 border border-orange-300 text-orange-800 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
+          <Clock size={16} />
+          <span className="text-sm">
+            <span className="font-semibold">Cooling estimate:</span> ~{data.time_to_safe}h to reach safe storage temp
+            ({activeFruit === "banana" ? "14°C" : "12°C"}) · Cooling rate: {data.cooling_rate} °C/h
+          </span>
+        </div>
+      )}
 
       {/* Details table */}
       <div className="bg-white rounded-2xl shadow p-4 sm:p-5">
