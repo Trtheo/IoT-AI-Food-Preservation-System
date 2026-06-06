@@ -234,7 +234,7 @@ export default function Prediction() {
   const [mode, setMode] = useState("live");
 
   const fn = useCallback(() => fetchPrediction(fruit), [fruit]);
-  const { data: raw, loading, refreshing, error, refetch } = useFetch(fn, 2000);
+  const { data: raw, loading, refreshing, error, refetch } = useFetch(fn, 30000);
 
   if (loading && mode === "live") return <Loader />;
 
