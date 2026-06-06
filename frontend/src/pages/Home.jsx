@@ -89,17 +89,10 @@ export default function Home() {
       <p className="text-gray-500 text-sm mb-4">Live sensor readings · auto-refreshes every 2s</p>
 
       {/* Sensor status badge */}
-      {data.stale ? (
-        <div className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl border mb-4 bg-orange-50 border-orange-300 text-orange-700">
-          <Wifi size={15} />
-          {`Sensor offline — last seen ${secondsAgo}s ago`}
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl border mb-4 bg-green-50 border-green-200 text-green-700">
-          <Wifi size={15} />
-          {`Sensor live - updated ${secondsAgo}s ago`}
-        </div>
-      )}
+      <div className={`flex items-center gap-2 text-sm px-4 py-2 rounded-xl border mb-4 ${data.stale ? "bg-orange-50 border-orange-300 text-orange-700" : "bg-green-50 border-green-200 text-green-700"}`}>
+        <Wifi size={15} />
+        {data.stale ? "Sensor offline" : `Sensor live — updated ${secondsAgo}s ago`}
+      </div>
 
       {/* Safe / Unsafe banner */}
       {unsafe ? (
