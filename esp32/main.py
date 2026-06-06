@@ -90,7 +90,7 @@ def connect_wifi():
     oled.text("Connecting WiFi", 0, 0)
     oled.text("Please wait...", 0, 12)
     oled.show()
-    for _ in range(10):
+    for _ in range(30):  # 15 seconds max
         if wlan.isconnected():
             wifi_connected = True
             oled.fill(0)
@@ -260,6 +260,8 @@ while True:
         "timestamp":            ts,
     }
     pushed = push_to_firebase(payload) if wifi_connected else False
+    if not pushed and not wifi_connected:
+        connect_wifi()
 
     save_state(fruit_index, storage_time)
 
