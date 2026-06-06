@@ -30,7 +30,7 @@ WIFI_PASSWORD = ""
 
 # --- Firebase ---
 FIREBASE_DB  = "https://iotproject-d752a-default-rtdb.firebaseio.com"
-FIREBASE_SECRET = "YOUR_FIREBASE_DATABASE_SECRET"  # replace with your secret in Wokwi
+FIREBASE_SECRET = "YOUR_FIREBASE_DATABASE_SECRET"
 FIREBASE_URL = FIREBASE_DB + "/sensor_data.json?auth=" + FIREBASE_SECRET
 
 # --- Thresholds ---
@@ -182,7 +182,7 @@ def get_status(fruit, temp, hum, gas, t):
     return "SAFE"
 
 # Unix epoch offset for Wokwi (utime starts from 0 on boot)
-EPOCH_OFFSET = 1779062400  # May 18, 2026 00:00:00 UTC
+EPOCH_OFFSET = 1780780800  # June 4, 2026 — sync with real time so stale check works
 
 # --- Boot Sequence ---
 wifi_connected = False
