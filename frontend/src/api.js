@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL || ""}/api/sensor`,
+  baseURL: `${import.meta.env.VITE_API_URL || "https://freshguard-backend-7srt.onrender.com"}/api/sensor`,
 });
 
 export const fetchLatest = () => api.get("/latest").then((r) => r.data);

@@ -46,13 +46,7 @@
       "left": 14,
       "attrs": { "value": "220" }
     },
-    {
-      "type": "wokwi-gas-sensor",
-      "id": "gas1",
-      "top": 220.0,
-      "left": 430.0,
-      "attrs": {}
-    },
+    { "type": "wokwi-potentiometer", "id": "gas1", "top": 220.0, "left": 430.0, "attrs": { "value": "0.5" } },
     { "type": "wokwi-potentiometer", "id": "pot2", "top": -318.1, "left": 96.6, "attrs": { "value": "0.15" } },
     { "type": "wokwi-dht22", "id": "dht1", "top": -38.1, "left": -235.8, "attrs": { "temperature": "15", "humidity": "88" } },
     {
@@ -78,9 +72,9 @@
     [ "esp:D27", "r2:1", "cyan", [ "v19.2", "h-201.6", "v-192" ] ],
     [ "r2:2", "led2:A", "cyan", [ "v0" ] ],
     [ "led2:C", "esp:GND.1", "black", [ "v19.2", "h38.8", "v201.6" ] ],
-    [ "gas1:VCC",  "esp:VIN",   "red",    [ "v0" ] ],
-    [ "gas1:GND",  "esp:GND.2", "black",  [ "v0" ] ],
-    [ "gas1:AOUT", "esp:D34",   "purple", [ "v0" ] ],
+    [ "gas1:VCC", "esp:VIN",   "red",    [ "v0" ] ],
+    [ "gas1:GND", "esp:GND.2", "black",  [ "v0" ] ],
+    [ "gas1:SIG", "esp:D34",   "purple", [ "v0" ] ],
     [ "pot2:GND", "esp:GND.2", "black", [ "v268.8", "h0", "v182.4" ] ],
     [ "pot2:VCC", "esp:VIN", "red", [ "v307.2", "h-0.8", "v153.6" ] ],
     [ "pot2:SIG", "esp:D35", "orange", [ "v0" ] ],

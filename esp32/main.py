@@ -29,7 +29,9 @@ WIFI_SSID     = "Wokwi-GUEST"
 WIFI_PASSWORD = ""
 
 # --- Firebase ---
-FIREBASE_URL = "https://iotproject-d752a-default-rtdb.firebaseio.com/sensor_data.json"
+FIREBASE_DB  = "https://iotproject-d752a-default-rtdb.firebaseio.com"
+FIREBASE_SECRET = "YOUR_FIREBASE_DATABASE_SECRET"  # replace with your secret in Wokwi
+FIREBASE_URL = FIREBASE_DB + "/sensor_data.json?auth=" + FIREBASE_SECRET
 
 # --- Thresholds ---
 THRESHOLDS = {
@@ -154,8 +156,12 @@ def push_to_firebase(payload):
                 headers={"Content-Type": "application/json"},
                 data=ujson.dumps(payload)
             )
+            status = res.status_code
+            res.content  # fully read response before closing
             res.close()
-            return True
+            if status == 200:
+                return True
+            print("Firebase rejected (attempt {}): HTTP {}".format(attempt + 1, status))
         except (OSError, ValueError) as e:
             print("Firebase push error (attempt {}): {}".format(attempt + 1, e))
             utime.sleep_ms(500)
@@ -267,8 +273,8 @@ while True:
     oled.text("{}".format("OK" if pushed else "--"), 100, 50)
     oled.show()
 
-    print("[{}] T:{} H:{} G:{} St:{}h Push:{} Status:{}".format(
-        fruit.upper(), temp, hum, gas, storage_time, pushed, status_msg
+    print("[{}] T:{} H:{} G:{} St:{}h Push:{} Status:{} WiFi:{}".format(
+        fruit.upper(), temp, hum, gas, storage_time, pushed, status_msg, wifi_connected
     ))
 
     # Poll button every 100ms during 2s wait — never misses a press
