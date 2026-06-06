@@ -10,7 +10,6 @@ import time
 import random
 import math
 import os
-import sys
 import json
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -64,28 +63,19 @@ def calc_heat(fruit, temperature, external_temperature, storage_time):
     T_safe = SAFE_TEMP[fruit]
     temp_delta = round(external_temperature - temperature, 1)
 
-    # Heat load: accumulated thermal energy above safe temp (kJ/kg approx)
-    # Q = m*c*delta_T, normalized: heat_load = temp_delta * storage_time
-    heat_load = round(temp_delta * storage_time, 2)
-
-    # Cooling rate: how fast fruit is losing heat (Newton's Law)
-    # dT/dt = -k * (T - T_ambient)
+    heat_load    = round(temp_delta * storage_time, 2)
     cooling_rate = round(k * abs(temperature - external_temperature), 3)
 
-    # Estimated hours to reach safe temp using Newton's Law:
-    # t = -ln((T_safe - T_ambient) / (T_current - T_ambient)) / k
     try:
         ratio = (T_safe - external_temperature) / (temperature - external_temperature)
-        if ratio > 0:
-            time_to_safe = round(-math.log(ratio) / k, 1)
-        else:
-            time_to_safe = 0.0
+        time_to_safe = round(-math.log(ratio) / k, 1) if ratio > 0 else 0.0
     except (ZeroDivisionError, ValueError):
         time_to_safe = 0.0
 
     return heat_load, cooling_rate, time_to_safe
 
 
+def select_fruit():
     fruit = os.environ.get("FRUIT_TYPE", "").lower()
     if fruit in SUPPORTED_FRUITS:
         return fruit
@@ -107,11 +97,11 @@ def get_reading(fruit, storage_time, scenario):
     humidity    = round(random.uniform(*r["humidity"]) + wave * 0.5, 1)
     gas         = round(random.uniform(*r["gas"]) + wave * 2)
     external_temperature = round(temperature + random.uniform(4, 8), 1)
-    temp_delta  = round(external_temperature - temperature, 1)
 
     heat_load, cooling_rate, time_to_safe = calc_heat(
         fruit, temperature, external_temperature, storage_time
     )
+    temp_delta = round(external_temperature - temperature, 1)
 
     return {
         "fruit_type":           fruit,
@@ -169,8 +159,12 @@ class HealthHandler(BaseHTTPRequestHandler):
     def log_message(self, *args):
         pass
 
+# Select fruit on main thread BEFORE starting the HTTP server
+# so input() doesn't deadlock with serve_forever() on the main thread
+_selected_fruit = select_fruit()
+
 def run_simulator():
-    fruit = select_fruit()
+    fruit = _selected_fruit
     storage_time, scenario, scenario_elapsed = load_state(fruit)
 
     print("=" * 55)

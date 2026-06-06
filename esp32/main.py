@@ -9,7 +9,7 @@ import network
 import urequests
 import ujson
 import utime
-import urandom
+import math
 
 # --- Pin Setup ---
 dht_sensor = dht.DHT22(Pin(4))
@@ -18,8 +18,10 @@ green_led  = Pin(27, Pin.OUT)
 buzzer     = PWM(Pin(18, Pin.OUT))
 buzzer.freq(1000)
 button     = Pin(25, Pin.IN, Pin.PULL_UP)
-gas_sensor = ADC(Pin(34))
-gas_sensor.atten(ADC.ATTN_11DB)
+gas_sensor  = ADC(Pin(34))          # MQ2 AOUT → GPIO 34
+gas_sensor.atten(ADC.ATTN_11DB)     # 0–3.6V range
+heat_sensor = ADC(Pin(35))
+heat_sensor.atten(ADC.ATTN_11DB)
 oled = oled_library.SSD1306_I2C(width=128, height=64, i2c=SoftI2C(scl=Pin(23), sda=Pin(22)))
 
 # --- WiFi ---
@@ -34,6 +36,26 @@ THRESHOLDS = {
     "banana": {"temp_min": 13, "temp_max": 19, "hum_max": 95, "gas_max": 220},
     "tomato": {"temp_min": 10, "temp_max": 20, "hum_max": 93, "gas_max": 220},
 }
+
+# --- Newton's Law of Cooling constants ---
+COOLING_K = {"banana": 0.05, "tomato": 0.04}
+SAFE_TEMP  = {"banana": 14.0, "tomato": 12.0}
+
+def calc_heat(fruit, temp, ext_temp, storage_time):
+    k      = COOLING_K[fruit]
+    T_safe = SAFE_TEMP[fruit]
+    delta  = ext_temp - temp
+
+    heat_load   = round(delta * storage_time, 2)
+    cooling_rate = round(k * abs(temp - ext_temp), 3)
+
+    try:
+        ratio = (T_safe - ext_temp) / (temp - ext_temp)
+        time_to_safe = round(-math.log(ratio) / k, 1) if ratio > 0 else 0.0
+    except (ZeroDivisionError, ValueError):
+        time_to_safe = 0.0
+
+    return heat_load, cooling_rate, time_to_safe
 
 FRUITS = ["banana", "tomato"]
 
@@ -111,9 +133,17 @@ def select_fruit_on_boot(saved_index):
     utime.sleep(1)
     return idx
 
-# --- Map ADC 0-4095 to gas ppm 80-400 ---
+# --- MQ2 ADC to gas ppm conversion ---
+# MQ2 AOUT voltage rises as gas concentration increases.
+# At clean air: ~0.3V (ADC ~341)  → ~80 ppm baseline
+# At high gas:  ~3.0V (ADC ~3414) → ~400 ppm
+# Linear approximation across the fruit spoilage range (80–400 ppm).
+# Formula: voltage = adc_val * (3.3 / 4095)
+#          ppm     = 80 + (voltage / 3.3) * 320
 def map_gas(adc_val):
-    return round(80 + (adc_val / 4095) * 320)
+    voltage = adc_val * (3.3 / 4095)
+    ppm     = round(80 + (voltage / 3.3) * 320)
+    return max(80, min(400, ppm))   # clamp to valid sensor range
 
 # --- Push to Firebase ---
 def push_to_firebase(payload):
@@ -145,6 +175,9 @@ def get_status(fruit, temp, hum, gas, t):
         return "GAS HIGH!"
     return "SAFE"
 
+# Unix epoch offset for Wokwi (utime starts from 0 on boot)
+EPOCH_OFFSET = 1779062400  # May 18, 2026 00:00:00 UTC
+
 # --- Boot Sequence ---
 wifi_connected = False
 connect_wifi()
@@ -157,8 +190,6 @@ last_btn  = 1
 
 # --- Main Loop ---
 while True:
-    btn = button.value()
-
     fruit = FRUITS[fruit_index]
     t     = THRESHOLDS[fruit]
 
@@ -168,15 +199,17 @@ while True:
         hum  = dht_sensor.humidity()
     except OSError as e:
         print("DHT22 read error:", e)
-        temp = 0.0
-        hum  = 0.0
+        # Skip this cycle — do not push bad data
+        for _ in range(20):
+            utime.sleep_ms(100)
+        continue
 
-    gas          = map_gas(gas_sensor.read())
-    ext_temp     = round(temp + 4 + (urandom.getrandbits(4) / 16) * 4, 1)
+    # MQ2 (GPIO 34) → gas ppm 80–400 via voltage-to-ppm conversion
+    gas      = map_gas(gas_sensor.read())
+    ext_temp     = round(20 + (heat_sensor.read() / 4095) * 25, 1)  # 20–45 °C range
     temp_delta   = round(ext_temp - temp, 1)
     storage_time = round(storage_time + 0.5, 1)
-    # Unix epoch offset for Wokwi (utime starts from 0 on boot)
-    EPOCH_OFFSET = 1779062400  # May 18, 2026 00:00:00 UTC
+    heat_load, cooling_rate, time_to_safe = calc_heat(fruit, temp, ext_temp, storage_time)
     ts = (EPOCH_OFFSET + utime.time()) * 1000
 
     unsafe = (
@@ -187,9 +220,12 @@ while True:
         (fruit == "tomato" and temp < 10)
     )
 
-    if last_btn == 0:
+    if button.value() == 0 and last_btn == 1:
         alert_ack = True
         buzzer.duty(0)
+        last_btn = 0
+    elif button.value() == 1:
+        last_btn = 1
 
     if unsafe and not alert_ack:
         red_led.on()
@@ -212,6 +248,9 @@ while True:
         "storage_time":         storage_time,
         "external_temperature": ext_temp,
         "temp_delta":           temp_delta,
+        "heat_load":            heat_load,
+        "cooling_rate":         cooling_rate,
+        "time_to_safe":         time_to_safe,
         "timestamp":            ts,
     }
     pushed = push_to_firebase(payload) if wifi_connected else False
@@ -222,8 +261,8 @@ while True:
     oled.fill(0)
     oled.text("FG " + fruit_label, 0, 0)
     oled.text("T:{:.1f}C H:{:.0f}%".format(temp, hum), 0, 12)
-    oled.text("Gas: {} ppm".format(gas), 0, 24)
-    oled.text("Store: {}h".format(storage_time), 0, 36)
+    oled.text("G:{} E:{:.1f}C".format(gas, ext_temp), 0, 24)
+    oled.text("St:{}h HL:{:.0f}".format(storage_time, heat_load), 0, 36)
     oled.text(status_msg, 0, 50)
     oled.text("{}".format("OK" if pushed else "--"), 100, 50)
     oled.show()

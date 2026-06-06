@@ -23,8 +23,8 @@ export function useFetch(fetchFn, interval = null) {
         setData(result);
         setError(null);
       } catch (e) {
-        setError(e.message);
-        // clear stale data on 404 so UI shows empty state
+        const msg = e?.response?.data?.error || e?.response?.data?.message || e.message;
+        setError(msg);
         if (e?.response?.status === 404 || e?.message?.includes("404")) {
           setData(null);
         }
@@ -39,6 +39,8 @@ export function useFetch(fetchFn, interval = null) {
   const refetch = useCallback(() => load(true), [load]);
 
   useEffect(() => {
+    setData(null);
+    setLoading(true);
     load(false);
     if (interval) {
       const id = setInterval(() => load(false), interval);

@@ -30,7 +30,7 @@ RISK_LEVEL = {
 }
 FRUIT_TYPE_MAP = {"banana": 0, "tomato": 1}
 
-REQUIRED_FIELDS = ["fruit_type", "temperature", "humidity", "gas", "storage_time", "temp_delta", "heat_load"]
+REQUIRED_FIELDS = ["fruit_type", "temperature", "humidity", "gas", "storage_time", "temp_delta"]
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -48,6 +48,8 @@ def predict():
             return jsonify({"error": "fruit_type must be 'banana' or 'tomato'"}), 400
 
         try:
+            heat_load = float(data["heat_load"]) if data.get("heat_load") is not None \
+                else float(data["temp_delta"]) * float(data["storage_time"])
             features = np.array([[
                 FRUIT_TYPE_MAP[fruit_name],
                 float(data["temperature"]),
@@ -55,7 +57,7 @@ def predict():
                 float(data["gas"]),
                 float(data["storage_time"]),
                 float(data["temp_delta"]),
-                float(data["heat_load"]),
+                heat_load,
             ]])
         except (ValueError, TypeError) as e:
             return jsonify({"error": f"Invalid numeric value: {str(e)}"}), 400

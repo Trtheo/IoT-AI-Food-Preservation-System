@@ -21,10 +21,6 @@ const THRESHOLDS = {
 const DEFAULT_FRUIT = "banana";
 const STALE_THRESHOLD_MS = 30000; // 30 seconds
 
-// Newton's Law of Cooling constants
-const COOLING_K    = { banana: 0.05, tomato: 0.04 };
-const SAFE_TEMP    = { banana: 14.0, tomato: 12.0 };
-
 function calcHeatLoad(temp_delta, storage_time) {
   return Math.round(temp_delta * storage_time * 100) / 100;
 }
@@ -75,10 +71,11 @@ const getLatest = async (req, res) => {
 
 const getHistory = async (req, res) => {
   try {
-    const { limit = 50 } = req.query;
+    const limit = parseInt(req.query.limit ?? 50, 10);
+    if (isNaN(limit) || limit < 1) return res.status(400).json({ error: "limit must be a positive integer" });
     const snapshot = await db
       .ref("sensor_data")
-      .limitToLast(Number(limit))
+      .limitToLast(limit)
       .once("value");
     const data = snapshot.val();
     if (!data) return res.status(404).json({ message: "No data found" });
@@ -91,10 +88,11 @@ const getHistory = async (req, res) => {
 
 const getAlerts = async (req, res) => {
   try {
-    const { limit = 100 } = req.query;
+    const limit = parseInt(req.query.limit ?? 100, 10);
+    if (isNaN(limit) || limit < 1) return res.status(400).json({ error: "limit must be a positive integer" });
     const snapshot = await db
       .ref("sensor_data")
-      .limitToLast(Number(limit))
+      .limitToLast(limit)
       .once("value");
     const data = snapshot.val();
     if (!data) return res.json([]);
@@ -144,13 +142,19 @@ const getPrediction = async (req, res) => {
     );
     res.json(mlRes.data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const msg = err.code === "ECONNREFUSED"
+      ? `ML service unreachable at ${ML_URL} — is it running?`
+      : err.response?.data?.error || err.message;
+    res.status(500).json({ error: msg });
   }
 };
 
 const getManualPrediction = async (req, res) => {
   try {
     const { fruit_type, temperature, humidity, gas, storage_time, temp_delta } = req.body;
+    const missing = ["fruit_type", "temperature", "humidity", "gas", "storage_time", "temp_delta"]
+      .filter((f) => req.body[f] === undefined || req.body[f] === null);
+    if (missing.length) return res.status(400).json({ error: `Missing fields: ${missing.join(", ")}` });
     const heat_load = req.body.heat_load ?? calcHeatLoad(temp_delta ?? 0, storage_time ?? 0);
     const mlRes = await axios.post(`${ML_URL}/predict`, {
       fruit_type, temperature, humidity, gas, storage_time,
@@ -159,7 +163,10 @@ const getManualPrediction = async (req, res) => {
     });
     res.json(mlRes.data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    const msg = err.code === "ECONNREFUSED"
+      ? `ML service unreachable at ${ML_URL} — is it running?`
+      : err.response?.data?.error || err.message;
+    res.status(500).json({ error: msg });
   }
 };
 

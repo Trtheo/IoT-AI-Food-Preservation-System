@@ -29,6 +29,8 @@ function getUnsafeReason(data, fruit, t) {
     return `Temperature too low: ${data.temperature}°C (min ${t.temperature.min}°C)`;
   if (data.temperature > t.temperature.max)
     return `Temperature too high: ${data.temperature}°C (max ${t.temperature.max}°C)`;
+  if (data.humidity < t.humidity.min)
+    return `Humidity too low: ${data.humidity}% (min ${t.humidity.min}%)`;
   if (data.humidity > t.humidity.max)
     return `Humidity too high: ${data.humidity}% (max ${t.humidity.max}%)`;
   if (data.gas > t.gas.max)
@@ -87,7 +89,12 @@ export default function Home() {
       <p className="text-gray-500 text-sm mb-4">Live sensor readings · auto-refreshes every 2s</p>
 
       {/* Sensor status badge */}
-      {!data.stale && (
+      {data.stale ? (
+        <div className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl border mb-4 bg-orange-50 border-orange-300 text-orange-700">
+          <Wifi size={15} />
+          {`Sensor offline — last seen ${secondsAgo}s ago`}
+        </div>
+      ) : (
         <div className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl border mb-4 bg-green-50 border-green-200 text-green-700">
           <Wifi size={15} />
           {`Sensor live - updated ${secondsAgo}s ago`}

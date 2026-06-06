@@ -11,7 +11,7 @@ const links = [
 ];
 
 export default function Navbar() {
-  const { fruit } = useFruit();
+  const { fruit, toggleFruit, isManual } = useFruit();
   const [open, setOpen] = useState(false);
 
   return (
@@ -42,9 +42,14 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="bg-green-900 rounded-xl px-3 py-1">
+          <button
+            onClick={toggleFruit}
+            className="bg-green-900 hover:bg-green-700 transition-colors rounded-xl px-3 py-1 cursor-pointer flex items-center gap-1.5"
+            title={isManual ? "Manual override — click to re-enable auto-sync" : "Click to toggle fruit"}
+          >
             <span className="text-xs sm:text-sm font-medium capitalize">{fruit}</span>
-          </div>
+            {isManual && <span className="text-xs text-yellow-300">●</span>}
+          </button>
           <button
             className="md:hidden p-1 rounded-lg hover:bg-green-900 transition-colors"
             onClick={() => setOpen((o) => !o)}

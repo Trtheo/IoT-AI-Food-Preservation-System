@@ -13,7 +13,7 @@ import {
 import "hammerjs";
 import zoomPlugin from "chartjs-plugin-zoom";
 import { Line } from "react-chartjs-2";
-import { Thermometer, Droplets, Wind, ZoomIn, AlertTriangle, Waves } from "lucide-react";
+import { Thermometer, Droplets, Wind, ZoomIn, AlertTriangle, Waves, Flame } from "lucide-react";
 import { fetchHistory } from "../api";
 import { useFetch } from "../hooks/useFetch";
 import { useFruit } from "../context/FruitContext";
@@ -34,6 +34,7 @@ const FRUIT_THRESHOLDS = {
 
 function getMetrics(fruit) {
   const t = FRUIT_THRESHOLDS[fruit] || FRUIT_THRESHOLDS.banana;
+  const heatMax = fruit === "tomato" ? 250 : 300;
   return [
     {
       key: "temperature", label: "Temperature", unit: "°C",
@@ -57,6 +58,12 @@ function getMetrics(fruit) {
       key: "temp_delta", label: "Temp Delta (ext-int)", unit: "°C",
       color: "#14b8a6", icon: Waves,
       thresholdMax: t.temp_delta.max,
+      thresholdMin: undefined,
+    },
+    {
+      key: "heat_load", label: "Heat Load", unit: "kJ/kg",
+      color: "#ef4444", icon: Flame,
+      thresholdMax: heatMax,
       thresholdMin: undefined,
     },
   ];
@@ -211,7 +218,8 @@ export default function Graphs() {
   const ref1 = useRef();
   const ref2 = useRef();
   const ref3 = useRef();
-  const refs = [ref0, ref1, ref2, ref3];
+  const ref4 = useRef();
+  const refs = [ref0, ref1, ref2, ref3, ref4];
 
   const metrics = getMetrics(fruit);
 

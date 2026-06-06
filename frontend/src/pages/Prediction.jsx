@@ -190,6 +190,7 @@ const FEATURE_COLORS = {
   storage_time: "#14b8a6",
   fruit_type:   "#22c55e",
   temp_delta:   "#f59e0b",
+  heat_load:    "#ef4444",
 };
 
 function FeatureImportanceCard() {
@@ -213,7 +214,7 @@ function FeatureImportanceCard() {
       {data.features.map(({ name, importance }) => (
         <div key={name} className="mb-3">
           <div className="flex justify-between text-sm text-gray-600 mb-1">
-            <span className="capitalize">{name.replace("_", " ")}</span>
+            <span className="capitalize">{name.replace(/_/g, " ")}</span>
             <span>{importance}%</span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2.5">
@@ -277,7 +278,7 @@ export default function Prediction() {
         </div>
       </div>
 
-      {mode === "live" && (
+      {mode === "live" && raw && (
         <>
           <div className="flex justify-end mb-4">
             <button
@@ -289,7 +290,7 @@ export default function Prediction() {
               {refreshing ? "Refreshing..." : "Refresh"}
             </button>
           </div>
-          <ResultCard data={data} />
+          <ResultCard data={raw} />
         </>
       )}
 
