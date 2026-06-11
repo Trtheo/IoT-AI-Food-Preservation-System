@@ -53,27 +53,26 @@ function getAlertMessages(r, fruit) {
 
   // --- Heat is the primary cause ---
   if (heat_load > t.heat_load)
-    msgs.push(`Excess heat absorbed: ${heat_load} kJ/kg — fruit thermal damage threshold exceeded (max ${t.heat_load} kJ/kg)`);
+    msgs.push(`The ${fruit} is too hot — it has absorbed too much heat and may be spoiling (${heat_load} kJ/kg)`);
 
   if (conduction > t.conduction)
-    msgs.push(`Heat leaking into storage: ${conduction} W/m²K — external heat conducting through walls (max ${t.conduction} W/m²K)`);
+    msgs.push(`The storage walls are too hot — outside heat is getting in and warming the ${fruit} (${conduction} W/m²K)`);
 
   if (cop < t.cop_min)
-    msgs.push(`Cooling system losing heat battle: COP ${cop} — heat removal rate insufficient (min COP ${t.cop_min})`);
+    msgs.push(`The cooling system is not working well enough — it cannot remove heat fast enough (COP ${cop})`);
 
-  // --- Temperature is a symptom of heat accumulation ---
   if (fruit === "tomato" && r.temperature < 10)
-    msgs.push(`Chilling injury: heat removed too aggressively — tomato at ${r.temperature}°C causes cell damage`);
+    msgs.push(`The tomato is too cold — it is suffering cold damage at ${r.temperature}°C`);
   else if (r.temperature < t.temp_min)
-    msgs.push(`Insufficient heat in storage: ${r.temperature}°C below safe range — risk of chilling damage (min ${t.temp_min}°C)`);
+    msgs.push(`The ${fruit} is too cold — storage temperature ${r.temperature}°C is below safe range`);
   else if (r.temperature > t.temp_max)
-    msgs.push(`Excess heat in storage: ${r.temperature}°C — heat accumulation accelerating spoilage (max ${t.temp_max}°C)`);
+    msgs.push(`The ${fruit} is too hot — storage temperature ${r.temperature}°C is above safe range`);
 
   if (r.humidity > t.hum_max)
-    msgs.push(`High humidity: ${r.humidity}% — moisture amplifies heat damage on fruit surface (max ${t.hum_max}%)`);
+    msgs.push(`The air is too humid — moisture at ${r.humidity}% is speeding up spoilage`);
 
   if (r.gas > t.gas_max)
-    msgs.push(`Elevated gas: ${r.gas} ppm — heat-driven metabolic activity producing excess ethylene (max ${t.gas_max} ppm)`);
+    msgs.push(`The ${fruit} is going bad — gas level ${r.gas} ppm is too high`);
 
   return msgs;
 }

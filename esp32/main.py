@@ -183,15 +183,15 @@ def push_to_firebase(payload):
 def get_status(fruit, temp, hum, gas, heat_load, conduction, cop, t):
     heat_limit = 300 if fruit == "banana" else 250
     cond_limit = 0.6 if fruit == "banana" else 0.5
-    if heat_load > heat_limit:  return "HEAT HIGH!"
-    if conduction > cond_limit: return "HEAT LEAK!"
-    if cop < 1.0:               return "COP LOW!"
-    if fruit == "tomato" and temp < 10: return "CHILLING!"
-    if temp < t["temp_min"]:    return "HEAT LOW!"
-    if temp > t["temp_max"]:    return "HEAT HIGH!"
-    if hum > t["hum_max"]:     return "HUM HIGH!"
-    if gas > t["gas_max"]:     return "GAS HIGH!"
-    return "SAFE"
+    if heat_load > heat_limit:          return "Too Hot!"
+    if conduction > cond_limit:         return "Walls Hot!"
+    if cop < 1.0:                       return "Cooling Fail"
+    if fruit == "tomato" and temp < 10: return "Too Cold!"
+    if temp < t["temp_min"]:            return "Too Cold!"
+    if temp > t["temp_max"]:            return "Too Hot!"
+    if hum > t["hum_max"]:             return "Too Humid!"
+    if gas > t["gas_max"]:             return "Going Bad!"
+    return "All Good"
 
 # Unix epoch offset for Wokwi (utime starts from 0 on boot)
 EPOCH_OFFSET = 1780780800  # June 4, 2026 — sync with real time so stale check works

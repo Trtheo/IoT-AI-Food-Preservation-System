@@ -26,25 +26,23 @@ function isUnsafe(data, fruit) {
 }
 
 function getUnsafeReason(data, fruit, t) {
-  // Heat-first priority
   if ((data.heat_load ?? 0) > t.heat_load)
-    return `Excess heat absorbed: ${data.heat_load} kJ/kg — thermal damage threshold exceeded`;
+    return `The ${fruit} is too hot — it has absorbed too much heat and may be spoiling`;
   if ((data.conduction ?? 0) > t.conduction)
-    return `Heat leaking through walls: ${data.conduction} W/m²K — external heat conducting into storage`;
+    return `The storage walls are too hot — outside heat is getting in and warming the ${fruit}`;
   if ((data.cop ?? 99) < 1.0)
-    return `Cooling losing heat battle: COP ${data.cop} — heat removal rate insufficient`;
-  // Temperature as heat symptom
+    return `The cooling system is not working well enough — it cannot remove heat fast enough`;
   if (fruit === "tomato" && data.temperature < 10)
-    return "Chilling injury — heat removed too aggressively, tomato below 10°C";
+    return `The tomato is too cold — it is suffering cold damage at ${data.temperature}°C`;
   if (data.temperature < t.temperature.min)
-    return `Insufficient heat removed: ${data.temperature}°C below safe range (min ${t.temperature.min}°C)`;
+    return `The ${fruit} is too cold — storage temperature ${data.temperature}°C is below safe range`;
   if (data.temperature > t.temperature.max)
-    return `Excess heat in storage: ${data.temperature}°C — accelerating spoilage (max ${t.temperature.max}°C)`;
+    return `The ${fruit} is too hot — storage temperature ${data.temperature}°C is above safe range`;
   if (data.humidity > t.humidity.max)
-    return `High humidity: ${data.humidity}% — moisture amplifying heat damage (max ${t.humidity.max}%)`;
+    return `The air is too humid — moisture at ${data.humidity}% is speeding up spoilage`;
   if (data.gas > t.gas.max)
-    return `Elevated gas: ${data.gas} ppm — heat-driven ethylene production (max ${t.gas.max} ppm)`;
-  return `Heat conditions out of safe range for ${fruit}`;
+    return `The ${fruit} is going bad — gas level ${data.gas} ppm is too high`;
+  return `Storage conditions are not safe for ${fruit}`;
 }
 
 function cardColor(value, min, max) {
