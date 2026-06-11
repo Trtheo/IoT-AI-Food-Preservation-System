@@ -37,37 +37,43 @@ function calcCOP(cooling_rate, storage_time, conduction) {
   return Math.round(q_cold / (conduction + 0.001) * 100) / 100;
 }
 
+// Heat-based thresholds — temperature is an indicator of heat level
+const HEAT_THRESHOLDS = {
+  banana: { heat_load: 300, conduction: 0.6, cop_min: 1.0, temp_min: 13, temp_max: 19, hum_max: 95, gas_max: 220 },
+  tomato: { heat_load: 250, conduction: 0.5, cop_min: 1.0, temp_min: 10, temp_max: 20, hum_max: 93, gas_max: 220 },
+};
+
 function getAlertMessages(r, fruit) {
-  const t = THRESHOLDS[fruit] || THRESHOLDS[DEFAULT_FRUIT];
+  const t = HEAT_THRESHOLDS[fruit] || HEAT_THRESHOLDS[DEFAULT_FRUIT];
   const msgs = [];
 
-  if (t.temperature.min !== undefined && r.temperature < t.temperature.min)
-    msgs.push(`Low temperature (chilling risk): ${r.temperature}°C - min is ${t.temperature.min}°C`);
-  if (r.temperature > t.temperature.max)
-    msgs.push(`High temperature: ${r.temperature}°C - max is ${t.temperature.max}°C`);
-  if (t.humidity.min !== undefined && r.humidity < t.humidity.min)
-    msgs.push(`Low humidity: ${r.humidity}% - min is ${t.humidity.min}%`);
-  if (r.humidity > t.humidity.max)
-    msgs.push(`High humidity: ${r.humidity}% - max is ${t.humidity.max}%`);
-  if (r.gas > t.gas.max)
-    msgs.push(`High gas level: ${r.gas} ppm - max is ${t.gas.max} ppm`);
-
-  // Heat load alert
-  const heat_load = r.heat_load ?? calcHeatLoad(r.temp_delta ?? 0, r.storage_time ?? 0);
-  const heatLimit = fruit === "banana" ? 300 : 250;
-  if (heat_load > heatLimit)
-    msgs.push(`High heat load: ${heat_load} kJ/kg - fruit has accumulated too much thermal energy`);
-
-  // Conduction alert — high heat leaking through walls
+  const heat_load  = r.heat_load  ?? calcHeatLoad(r.temp_delta ?? 0, r.storage_time ?? 0);
   const conduction = r.conduction ?? calcConduction(fruit, r.temp_delta ?? 0);
-  const condLimit  = fruit === "banana" ? 0.6 : 0.5;
-  if (conduction > condLimit)
-    msgs.push(`High thermal conduction: ${conduction} W/m²K - heat leaking into storage`);
+  const cop        = r.cop        ?? calcCOP(r.cooling_rate, r.storage_time, conduction);
 
-  // COP alert — cooling system inefficiency
-  const cop = r.cop ?? calcCOP(r.cooling_rate, r.storage_time, conduction);
-  if (cop < 1.0)
-    msgs.push(`Low COP: ${cop} - cooling system is inefficient, more energy lost than removed`);
+  // --- Heat is the primary cause ---
+  if (heat_load > t.heat_load)
+    msgs.push(`Excess heat absorbed: ${heat_load} kJ/kg — fruit thermal damage threshold exceeded (max ${t.heat_load} kJ/kg)`);
+
+  if (conduction > t.conduction)
+    msgs.push(`Heat leaking into storage: ${conduction} W/m²K — external heat conducting through walls (max ${t.conduction} W/m²K)`);
+
+  if (cop < t.cop_min)
+    msgs.push(`Cooling system losing heat battle: COP ${cop} — heat removal rate insufficient (min COP ${t.cop_min})`);
+
+  // --- Temperature is a symptom of heat accumulation ---
+  if (fruit === "tomato" && r.temperature < 10)
+    msgs.push(`Chilling injury: heat removed too aggressively — tomato at ${r.temperature}°C causes cell damage`);
+  else if (r.temperature < t.temp_min)
+    msgs.push(`Insufficient heat in storage: ${r.temperature}°C below safe range — risk of chilling damage (min ${t.temp_min}°C)`);
+  else if (r.temperature > t.temp_max)
+    msgs.push(`Excess heat in storage: ${r.temperature}°C — heat accumulation accelerating spoilage (max ${t.temp_max}°C)`);
+
+  if (r.humidity > t.hum_max)
+    msgs.push(`High humidity: ${r.humidity}% — moisture amplifies heat damage on fruit surface (max ${t.hum_max}%)`);
+
+  if (r.gas > t.gas_max)
+    msgs.push(`Elevated gas: ${r.gas} ppm — heat-driven metabolic activity producing excess ethylene (max ${t.gas_max} ppm)`);
 
   return msgs;
 }

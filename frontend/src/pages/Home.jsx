@@ -6,9 +6,10 @@ import { useFruit } from "../context/FruitContext";
 import StatCard from "../components/StatCard";
 import Loader from "../components/Loader";
 
+// Heat thresholds — temperature used only as heat indicator
 const THRESHOLDS = {
-  banana: { temperature: { min: 13, max: 19 }, humidity: { min: 80, max: 95 }, gas: { max: 220 } },
-  tomato: { temperature: { min: 10, max: 20 }, humidity: { min: 80, max: 93 }, gas: { max: 220 } },
+  banana: { temperature: { min: 13, max: 19 }, humidity: { min: 80, max: 95 }, gas: { max: 220 }, heat_load: 300, conduction: 0.6 },
+  tomato: { temperature: { min: 10, max: 20 }, humidity: { min: 80, max: 93 }, gas: { max: 220 }, heat_load: 250, conduction: 0.5 },
 };
 
 function isUnsafe(data, fruit) {
@@ -16,26 +17,34 @@ function isUnsafe(data, fruit) {
   return (
     data.temperature < (t.temperature.min ?? -Infinity) ||
     data.temperature > t.temperature.max ||
-    data.humidity < (t.humidity.min ?? -Infinity) ||
     data.humidity > t.humidity.max ||
-    data.gas > t.gas.max
+    data.gas > t.gas.max ||
+    (data.heat_load ?? 0) > t.heat_load ||
+    (data.conduction ?? 0) > t.conduction ||
+    (data.cop ?? 99) < 1.0
   );
 }
 
 function getUnsafeReason(data, fruit, t) {
+  // Heat-first priority
+  if ((data.heat_load ?? 0) > t.heat_load)
+    return `Excess heat absorbed: ${data.heat_load} kJ/kg — thermal damage threshold exceeded`;
+  if ((data.conduction ?? 0) > t.conduction)
+    return `Heat leaking through walls: ${data.conduction} W/m²K — external heat conducting into storage`;
+  if ((data.cop ?? 99) < 1.0)
+    return `Cooling losing heat battle: COP ${data.cop} — heat removal rate insufficient`;
+  // Temperature as heat symptom
   if (fruit === "tomato" && data.temperature < 10)
-    return "Chilling injury risk - tomato below 10°C!";
+    return "Chilling injury — heat removed too aggressively, tomato below 10°C";
   if (data.temperature < t.temperature.min)
-    return `Temperature too low: ${data.temperature}°C (min ${t.temperature.min}°C)`;
+    return `Insufficient heat removed: ${data.temperature}°C below safe range (min ${t.temperature.min}°C)`;
   if (data.temperature > t.temperature.max)
-    return `Temperature too high: ${data.temperature}°C (max ${t.temperature.max}°C)`;
-  if (data.humidity < t.humidity.min)
-    return `Humidity too low: ${data.humidity}% (min ${t.humidity.min}%)`;
+    return `Excess heat in storage: ${data.temperature}°C — accelerating spoilage (max ${t.temperature.max}°C)`;
   if (data.humidity > t.humidity.max)
-    return `Humidity too high: ${data.humidity}% (max ${t.humidity.max}%)`;
+    return `High humidity: ${data.humidity}% — moisture amplifying heat damage (max ${t.humidity.max}%)`;
   if (data.gas > t.gas.max)
-    return `Gas level too high: ${data.gas} ppm (max ${t.gas.max} ppm)`;
-  return `Warning: ${fruit} storage conditions out of range`;
+    return `Elevated gas: ${data.gas} ppm — heat-driven ethylene production (max ${t.gas.max} ppm)`;
+  return `Heat conditions out of safe range for ${fruit}`;
 }
 
 function cardColor(value, min, max) {
@@ -105,7 +114,7 @@ export default function Home() {
       ) : (
         <div className="bg-green-100 border border-green-400 text-green-700 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
           <Wifi size={16} />
-          <span className="font-medium text-sm">Storage conditions are safe for {activeFruit}</span>
+          <span className="font-medium text-sm">Heat levels safe — {activeFruit} storage conditions optimal</span>
         </div>
       )}
 
@@ -125,13 +134,13 @@ export default function Home() {
           color={data.cop < 1.0 ? "bg-red-500" : data.cop < 3.0 ? "bg-yellow-500" : "bg-green-600"} />
       </div>
 
-      {/* Cooling recommendation (Newton's Law) */}
+      {/* Cooling recommendation */}
       {data.time_to_safe !== undefined && data.time_to_safe > 0 && (
         <div className="bg-orange-50 border border-orange-300 text-orange-800 rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
           <Clock size={16} />
           <span className="text-sm">
-            <span className="font-semibold">Cooling estimate:</span> ~{data.time_to_safe}h to reach safe storage temp
-            ({activeFruit === "banana" ? "14°C" : "12°C"}) · Cooling rate: {data.cooling_rate} °C/h
+            <span className="font-semibold">Heat removal estimate:</span> ~{data.time_to_safe}h to dissipate heat to safe level
+            ({activeFruit === "banana" ? "14°C" : "12°C"}) · Heat removal rate: {data.cooling_rate} °C/h
           </span>
         </div>
       )}

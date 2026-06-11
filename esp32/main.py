@@ -179,18 +179,18 @@ def push_to_firebase(payload):
             utime.sleep_ms(500)
     return False
 
-# --- Build Status Message ---
-def get_status(fruit, temp, hum, gas, t):
-    if fruit == "tomato" and temp < 10:
-        return "CHILLING!"
-    if temp < t["temp_min"]:
-        return "T LOW!"
-    if temp > t["temp_max"]:
-        return "T HIGH!"
-    if hum > t["hum_max"]:
-        return "HUM HIGH!"
-    if gas > t["gas_max"]:
-        return "GAS HIGH!"
+# --- Build Status Message (heat-first logic) ---
+def get_status(fruit, temp, hum, gas, heat_load, conduction, cop, t):
+    heat_limit = 300 if fruit == "banana" else 250
+    cond_limit = 0.6 if fruit == "banana" else 0.5
+    if heat_load > heat_limit:  return "HEAT HIGH!"
+    if conduction > cond_limit: return "HEAT LEAK!"
+    if cop < 1.0:               return "COP LOW!"
+    if fruit == "tomato" and temp < 10: return "CHILLING!"
+    if temp < t["temp_min"]:    return "HEAT LOW!"
+    if temp > t["temp_max"]:    return "HEAT HIGH!"
+    if hum > t["hum_max"]:     return "HUM HIGH!"
+    if gas > t["gas_max"]:     return "GAS HIGH!"
     return "SAFE"
 
 # Unix epoch offset for Wokwi (utime starts from 0 on boot)
@@ -257,7 +257,7 @@ while True:
         if not unsafe:
             alert_ack = False
 
-    status_msg = get_status(fruit, temp, hum, gas, t)
+    status_msg = get_status(fruit, temp, hum, gas, heat_load, conduction, cop, t)
 
     payload = {
         "fruit_type":           fruit,
