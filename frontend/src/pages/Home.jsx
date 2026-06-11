@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from "react";
-import { Thermometer, Droplets, Wind, AlertTriangle, Wifi, Flame, Clock } from "lucide-react";
+import { Thermometer, Droplets, Wind, AlertTriangle, Wifi, Flame, Clock, Zap, Activity } from "lucide-react";
 import { fetchLatest } from "../api";
 import { useFetch } from "../hooks/useFetch";
 import { useFruit } from "../context/FruitContext";
@@ -110,7 +110,7 @@ export default function Home() {
       )}
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
         <StatCard label="Temperature" value={data.temperature} unit="°C" icon={Thermometer}
           color={cardColor(data.temperature, t.temperature.min, t.temperature.max) ?? "bg-green-600"} />
         <StatCard label="Humidity" value={data.humidity} unit="%" icon={Droplets}
@@ -119,6 +119,10 @@ export default function Home() {
           color={data.gas > t.gas.max ? "bg-red-500" : "bg-purple-600"} />
         <StatCard label="Heat Load" value={data.heat_load ?? "—"} unit="kJ/kg" icon={Flame}
           color={data.heat_load > (activeFruit === "banana" ? 300 : 250) ? "bg-orange-500" : "bg-orange-400"} />
+        <StatCard label="Conduction" value={data.conduction ?? "—"} unit="W/m²K" icon={Activity}
+          color={data.conduction > (activeFruit === "banana" ? 0.6 : 0.5) ? "bg-red-500" : "bg-teal-600"} />
+        <StatCard label="COP" value={data.cop ?? "—"} unit="" icon={Zap}
+          color={data.cop < 1.0 ? "bg-red-500" : data.cop < 3.0 ? "bg-yellow-500" : "bg-green-600"} />
       </div>
 
       {/* Cooling recommendation (Newton's Law) */}
@@ -139,10 +143,13 @@ export default function Home() {
           <tbody>
             {[
               ["Fruit Type",    (data.fruit_type ?? "-").charAt(0).toUpperCase() + (data.fruit_type ?? "").slice(1)],
-              ["Storage Time", `${data.storage_time ?? "-"} hrs`],
+              ["Storage Time",  `${data.storage_time ?? "-"} hrs`],
               ["External Temp", `${data.external_temperature ?? "-"} °C`],
               ["Temp Delta",    `${data.temp_delta ?? "-"} °C`],
-              ["Last Updated", receivedAt ? receivedAt.toLocaleString() : "-"],
+              ["Cooling Rate",  `${data.cooling_rate ?? "-"} °C/h`],
+              ["Conduction",    `${data.conduction ?? "-"} W/m²K`],
+              ["COP",           data.cop ?? "-"],
+              ["Last Updated",  receivedAt ? receivedAt.toLocaleString() : "-"],
             ].map(([k, v]) => (
               <tr key={k} className="border-b last:border-0">
                 <td className="py-2 font-medium text-gray-500">{k}</td>

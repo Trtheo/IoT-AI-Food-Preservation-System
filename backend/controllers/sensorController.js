@@ -25,6 +25,18 @@ function calcHeatLoad(temp_delta, storage_time) {
   return Math.round(temp_delta * storage_time * 100) / 100;
 }
 
+// Fourier's Law of Conduction: Q = k_wall * |temp_delta|
+const K_WALL = { banana: 0.12, tomato: 0.10 };
+function calcConduction(fruit, temp_delta) {
+  return Math.round(K_WALL[fruit] * Math.abs(temp_delta) * 1000) / 1000;
+}
+
+// COP = Q_cold / W_input  (Q_cold = cooling_rate * storage_time)
+function calcCOP(cooling_rate, storage_time, conduction) {
+  const q_cold = (cooling_rate ?? 0) * (storage_time ?? 0);
+  return Math.round(q_cold / (conduction + 0.001) * 100) / 100;
+}
+
 function getAlertMessages(r, fruit) {
   const t = THRESHOLDS[fruit] || THRESHOLDS[DEFAULT_FRUIT];
   const msgs = [];
@@ -45,6 +57,17 @@ function getAlertMessages(r, fruit) {
   const heatLimit = fruit === "banana" ? 300 : 250;
   if (heat_load > heatLimit)
     msgs.push(`High heat load: ${heat_load} kJ/kg - fruit has accumulated too much thermal energy`);
+
+  // Conduction alert — high heat leaking through walls
+  const conduction = r.conduction ?? calcConduction(fruit, r.temp_delta ?? 0);
+  const condLimit  = fruit === "banana" ? 0.6 : 0.5;
+  if (conduction > condLimit)
+    msgs.push(`High thermal conduction: ${conduction} W/m²K - heat leaking into storage`);
+
+  // COP alert — cooling system inefficiency
+  const cop = r.cop ?? calcCOP(r.cooling_rate, r.storage_time, conduction);
+  if (cop < 1.0)
+    msgs.push(`Low COP: ${cop} - cooling system is inefficient, more energy lost than removed`);
 
   return msgs;
 }

@@ -51,15 +51,18 @@ SCENARIO_DURATION = {
 }
 
 # Cooling constant k per fruit (Newton's Law of Cooling)
-# Higher k = faster cooling. Derived from biological data.
 COOLING_K = {"banana": 0.05, "tomato": 0.04}
 
 # Safe target storage temperatures per fruit
 SAFE_TEMP = {"banana": 14.0, "tomato": 12.0}
 
+# Thermal conductivity of storage wall per fruit (W/m·K simplified)
+# Represents how easily heat conducts through storage walls
+K_WALL = {"banana": 0.12, "tomato": 0.10}
+
 def calc_heat(fruit, temperature, external_temperature, storage_time):
-    """Newton's Law of Cooling derived heat metrics."""
-    k = COOLING_K[fruit]
+    """Newton's Law of Cooling + Conduction (Fourier) + COP metrics."""
+    k      = COOLING_K[fruit]
     T_safe = SAFE_TEMP[fruit]
     temp_delta = round(external_temperature - temperature, 1)
 
@@ -72,7 +75,15 @@ def calc_heat(fruit, temperature, external_temperature, storage_time):
     except (ZeroDivisionError, ValueError):
         time_to_safe = 0.0
 
-    return heat_load, cooling_rate, time_to_safe
+    # Fourier's Law of Conduction: Q_cond = k_wall * temp_delta
+    conduction = round(K_WALL[fruit] * abs(temp_delta), 3)
+
+    # COP = Q_cold / W_input  where W_input = conduction heat leaking in
+    # Q_cold = heat removed by cooling = cooling_rate * storage_time
+    q_cold = cooling_rate * storage_time
+    cop    = round(q_cold / (conduction + 0.001), 2)  # +0.001 avoids div/0
+
+    return heat_load, cooling_rate, time_to_safe, conduction, cop
 
 
 def select_fruit():
@@ -98,7 +109,7 @@ def get_reading(fruit, storage_time, scenario):
     gas         = round(random.uniform(*r["gas"]) + wave * 2)
     external_temperature = round(temperature + random.uniform(4, 8), 1)
 
-    heat_load, cooling_rate, time_to_safe = calc_heat(
+    heat_load, cooling_rate, time_to_safe, conduction, cop = calc_heat(
         fruit, temperature, external_temperature, storage_time
     )
     temp_delta = round(external_temperature - temperature, 1)
@@ -114,6 +125,8 @@ def get_reading(fruit, storage_time, scenario):
         "heat_load":            heat_load,
         "cooling_rate":         cooling_rate,
         "time_to_safe":         time_to_safe,
+        "conduction":           conduction,
+        "cop":                  cop,
         "timestamp":            int(time.time() * 1000),
     }
 
@@ -181,7 +194,9 @@ def run_simulator():
             f"Temp: {reading['temperature']:5.1f}C  "
             f"Humidity: {reading['humidity']:5.1f}%  "
             f"Gas: {reading['gas']:4d} ppm  "
-            f"Time: {reading['storage_time']:5.1f}h"
+            f"Time: {reading['storage_time']:5.1f}h  "
+            f"Cond: {reading['conduction']:.3f}W  "
+            f"COP: {reading['cop']:.2f}"
         )
         storage_time += TIME_STEP
         scenario_elapsed += TIME_STEP

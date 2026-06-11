@@ -45,12 +45,15 @@ THRESHOLDS = {
 COOLING_K = {"banana": 0.05, "tomato": 0.04}
 SAFE_TEMP  = {"banana": 14.0, "tomato": 12.0}
 
+# Thermal conductivity of storage wall (Fourier's Law)
+K_WALL = {"banana": 0.12, "tomato": 0.10}
+
 def calc_heat(fruit, temp, ext_temp, storage_time):
     k      = COOLING_K[fruit]
     T_safe = SAFE_TEMP[fruit]
     delta  = ext_temp - temp
 
-    heat_load   = round(delta * storage_time, 2)
+    heat_load    = round(delta * storage_time, 2)
     cooling_rate = round(k * abs(temp - ext_temp), 3)
 
     try:
@@ -59,7 +62,14 @@ def calc_heat(fruit, temp, ext_temp, storage_time):
     except (ZeroDivisionError, ValueError):
         time_to_safe = 0.0
 
-    return heat_load, cooling_rate, time_to_safe
+    # Fourier conduction: Q = k_wall * |delta|
+    conduction = round(K_WALL[fruit] * abs(delta), 3)
+
+    # COP = Q_cold / W_input
+    q_cold = cooling_rate * storage_time
+    cop    = round(q_cold / (conduction + 0.001), 2)
+
+    return heat_load, cooling_rate, time_to_safe, conduction, cop
 
 FRUITS = ["banana", "tomato"]
 
@@ -218,7 +228,7 @@ while True:
     ext_temp     = round(20 + (heat_sensor.read() / 4095) * 25, 1)  # 20–45 °C range
     temp_delta   = round(ext_temp - temp, 1)
     storage_time = round(storage_time + 0.5, 1)
-    heat_load, cooling_rate, time_to_safe = calc_heat(fruit, temp, ext_temp, storage_time)
+    heat_load, cooling_rate, time_to_safe, conduction, cop = calc_heat(fruit, temp, ext_temp, storage_time)
     ts = (EPOCH_OFFSET + utime.time()) * 1000
 
     unsafe = (
@@ -260,6 +270,8 @@ while True:
         "heat_load":            heat_load,
         "cooling_rate":         cooling_rate,
         "time_to_safe":         time_to_safe,
+        "conduction":           conduction,
+        "cop":                  cop,
         "timestamp":            ts,
     }
     pushed = push_to_firebase(payload) if wifi_connected else False
@@ -278,12 +290,13 @@ while True:
         oled2.text("next reading...", 0, 32)
         oled2.show()
     else:
-        pt, ph, pg, pe, pst = prev_snap
+        pt, ph, pg, pe, pst, phl, pcd, pcp = prev_snap
         oled2.fill(0)
         oled2.text("PREV " + fruit_label, 0, 0)
         oled2.text("T:{:.1f}C H:{:.0f}%".format(pt, ph), 0, 14)
         oled2.text("G:{} E:{:.1f}C".format(pg, pe), 0, 26)
-        oled2.text("St:{:.1f}h".format(pst), 0, 38)
+        oled2.text("HL:{:.1f} Cd:{:.3f}".format(phl, pcd), 0, 38)
+        oled2.text("COP:{:.2f}".format(pcp), 0, 52)
         oled2.show()
 
     # --- Live OLED (oled1) ---
@@ -291,31 +304,37 @@ while True:
     oled.text("LIVE " + fruit_label, 0, 0)
     oled.text("T:{:.1f}C H:{:.0f}%".format(temp, hum), 0, 14)
     oled.text("G:{} E:{:.1f}C".format(gas, ext_temp), 0, 26)
-    oled.text("St:{:.1f}h HL:{:.0f}".format(storage_time, heat_load), 0, 38)
-    oled.text(status_msg + " " + ("OK" if pushed else "--"), 0, 52)
+    oled.text("HL:{:.1f} Cd:{:.3f}".format(heat_load, conduction), 0, 38)
+    oled.text("COP:{:.2f} {}".format(cop, status_msg[:4]), 0, 52)
     oled.show()
 
     # --- Serial Monitor ---
     print("\n==== FreshGuard [{}] ====".format(fruit.upper()))
     if prev_snap is None:
-        print("              PREV       NOW")
-        print("Temp (C)   :       --   {:>7.1f}".format(temp))
-        print("Humidity(%):       --   {:>7.1f}".format(hum))
-        print("Gas (ppm)  :       --   {:>7d}".format(gas))
-        print("Ext Temp(C):       --   {:>7.1f}".format(ext_temp))
-        print("Storage (h):       --   {:>7.1f}".format(storage_time))
+        print("               PREV       NOW")
+        print("Temp (C)    :       --   {:>7.1f}".format(temp))
+        print("Humidity(%) :       --   {:>7.1f}".format(hum))
+        print("Gas (ppm)   :       --   {:>7d}".format(gas))
+        print("Ext Temp(C) :       --   {:>7.1f}".format(ext_temp))
+        print("Storage (h) :       --   {:>7.1f}".format(storage_time))
+        print("Heat Load   :       --   {:>7.1f}".format(heat_load))
+        print("Conduction  :       --   {:>7.3f}".format(conduction))
+        print("COP         :       --   {:>7.2f}".format(cop))
     else:
-        pt, ph, pg, pe, pst = prev_snap
-        print("              PREV       NOW")
-        print("Temp (C)   : {:>7.1f}  {:>7.1f}".format(pt, temp))
-        print("Humidity(%): {:>7.1f}  {:>7.1f}".format(ph, hum))
-        print("Gas (ppm)  : {:>7d}  {:>7d}".format(pg, gas))
-        print("Ext Temp(C): {:>7.1f}  {:>7.1f}".format(pe, ext_temp))
-        print("Storage (h): {:>7.1f}  {:>7.1f}".format(pst, storage_time))
-    print("Status     : {}  |  WiFi:{}".format(status_msg, wifi_connected))
+        pt, ph, pg, pe, pst, phl, pcd, pcp = prev_snap
+        print("               PREV       NOW")
+        print("Temp (C)    : {:>7.1f}  {:>7.1f}".format(pt, temp))
+        print("Humidity(%) : {:>7.1f}  {:>7.1f}".format(ph, hum))
+        print("Gas (ppm)   : {:>7d}  {:>7d}".format(pg, gas))
+        print("Ext Temp(C) : {:>7.1f}  {:>7.1f}".format(pe, ext_temp))
+        print("Storage (h) : {:>7.1f}  {:>7.1f}".format(pst, storage_time))
+        print("Heat Load   : {:>7.1f}  {:>7.1f}".format(phl, heat_load))
+        print("Conduction  : {:>7.3f}  {:>7.3f}".format(pcd, conduction))
+        print("COP         : {:>7.2f}  {:>7.2f}".format(pcp, cop))
+    print("Status      : {}  |  WiFi:{}".format(status_msg, wifi_connected))
 
     # --- Shift current to previous ---
-    prev_snap = (temp, hum, gas, ext_temp, storage_time)
+    prev_snap = (temp, hum, gas, ext_temp, storage_time, heat_load, conduction, cop)
 
     # Poll button every 100ms during 2s wait — never misses a press
     for _ in range(20):
