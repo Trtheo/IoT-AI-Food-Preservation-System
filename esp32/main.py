@@ -206,6 +206,7 @@ save_state(fruit_index, storage_time)
 alert_ack    = True
 last_btn     = 1
 prev_snap    = None  # holds previous reading for oled2
+prev_status  = "--"   # holds previous status for oled2
 
 # --- Main Loop ---
 while True:
@@ -293,19 +294,21 @@ while True:
         pt, ph, pg, pe, pst, phl, pcd, pcp = prev_snap
         oled2.fill(0)
         oled2.text("PREV " + fruit_label, 0, 0)
-        oled2.text("T:{:.1f}C H:{:.0f}%".format(pt, ph), 0, 14)
-        oled2.text("G:{} E:{:.1f}C".format(pg, pe), 0, 26)
-        oled2.text("HL:{:.1f} Cd:{:.3f}".format(phl, pcd), 0, 38)
-        oled2.text("COP:{:.2f}".format(pcp), 0, 52)
+        oled2.text("T:{:.1f}C H:{:.0f}%".format(pt, ph), 0, 10)
+        oled2.text("G:{} E:{:.1f}C".format(pg, pe), 0, 20)
+        oled2.text("HL:{:.1f} Cd:{:.3f}".format(phl, pcd), 0, 30)
+        oled2.text("COP:{:.2f}".format(pcp), 0, 40)
+        oled2.text(">>{}".format(prev_status), 0, 52)
         oled2.show()
 
     # --- Live OLED (oled1) ---
     oled.fill(0)
     oled.text("LIVE " + fruit_label, 0, 0)
-    oled.text("T:{:.1f}C H:{:.0f}%".format(temp, hum), 0, 14)
-    oled.text("G:{} E:{:.1f}C".format(gas, ext_temp), 0, 26)
-    oled.text("HL:{:.1f} Cd:{:.3f}".format(heat_load, conduction), 0, 38)
-    oled.text("COP:{:.2f} {}".format(cop, status_msg[:4]), 0, 52)
+    oled.text("T:{:.1f}C H:{:.0f}%".format(temp, hum), 0, 10)
+    oled.text("G:{} E:{:.1f}C".format(gas, ext_temp), 0, 20)
+    oled.text("HL:{:.1f} Cd:{:.3f}".format(heat_load, conduction), 0, 30)
+    oled.text("COP:{:.2f}".format(cop), 0, 40)
+    oled.text(">>{}".format(status_msg), 0, 52)
     oled.show()
 
     # --- Serial Monitor ---
@@ -334,7 +337,8 @@ while True:
     print("Status      : {}  |  WiFi:{}".format(status_msg, wifi_connected))
 
     # --- Shift current to previous ---
-    prev_snap = (temp, hum, gas, ext_temp, storage_time, heat_load, conduction, cop)
+    prev_snap   = (temp, hum, gas, ext_temp, storage_time, heat_load, conduction, cop)
+    prev_status = status_msg
 
     # Poll button every 100ms during 2s wait — never misses a press
     for _ in range(20):
@@ -342,7 +346,8 @@ while True:
         if b == 0 and last_btn == 1:
             fruit_index  = (fruit_index + 1) % 2
             alert_ack    = True
-            prev_snap = None   # reset so new fruit starts fresh
+            prev_snap   = None
+            prev_status = "--"
             save_state(fruit_index, storage_time)
             utime.sleep_ms(300)
             last_btn = 1
