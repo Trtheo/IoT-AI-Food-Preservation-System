@@ -119,17 +119,23 @@ export default function Home() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
         <StatCard label="Temperature" value={data.temperature} unit="°C" icon={Thermometer}
-          color={cardColor(data.temperature, t.temperature.min, t.temperature.max) ?? "bg-green-600"} />
+          color={cardColor(data.temperature, t.temperature.min, t.temperature.max) ?? "bg-green-600"}
+          min={t.temperature.min} max={t.temperature.max} />
         <StatCard label="Humidity" value={data.humidity} unit="%" icon={Droplets}
-          color={cardColor(data.humidity, t.humidity.min, t.humidity.max) ?? "bg-blue-600"} />
+          color={cardColor(data.humidity, t.humidity.min, t.humidity.max) ?? "bg-blue-600"}
+          min={t.humidity.min} max={t.humidity.max} />
         <StatCard label="Gas Level" value={data.gas} unit="ppm" icon={Wind}
-          color={data.gas > t.gas.max ? "bg-red-500" : "bg-purple-600"} />
+          color={data.gas > t.gas.max ? "bg-red-500" : "bg-purple-600"}
+          max={t.gas.max} />
         <StatCard label="Heat Load" value={data.heat_load ?? "—"} unit="kJ/kg" icon={Flame}
-          color={data.heat_load > (activeFruit === "banana" ? 300 : 250) ? "bg-orange-500" : "bg-orange-400"} />
+          color={data.heat_load > (activeFruit === "banana" ? 300 : 250) ? "bg-orange-500" : "bg-orange-400"}
+          max={activeFruit === "banana" ? 300 : 250} />
         <StatCard label="Conduction" value={data.conduction ?? "—"} unit="W/m²K" icon={Activity}
-          color={data.conduction > (activeFruit === "banana" ? 0.6 : 0.5) ? "bg-red-500" : "bg-teal-600"} />
+          color={data.conduction > (activeFruit === "banana" ? 0.6 : 0.5) ? "bg-red-500" : "bg-teal-600"}
+          max={activeFruit === "banana" ? 0.6 : 0.5} />
         <StatCard label="COP" value={data.cop ?? "—"} unit="" icon={Zap}
-          color={data.cop < 1.0 ? "bg-red-500" : data.cop < 3.0 ? "bg-yellow-500" : "bg-green-600"} />
+          color={data.cop < 1.0 ? "bg-red-500" : data.cop < 3.0 ? "bg-yellow-500" : "bg-green-600"}
+          min={1.0} />
       </div>
 
       {/* Cooling recommendation */}
