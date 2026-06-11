@@ -22,7 +22,9 @@ gas_sensor  = ADC(Pin(34))          # MQ2 AOUT → GPIO 34
 gas_sensor.atten(ADC.ATTN_11DB)     # 0–3.6V range
 heat_sensor = ADC(Pin(35))
 heat_sensor.atten(ADC.ATTN_11DB)
-oled = oled_library.SSD1306_I2C(width=128, height=64, i2c=SoftI2C(scl=Pin(23), sda=Pin(22)))
+i2c  = SoftI2C(scl=Pin(23), sda=Pin(22))
+oled  = oled_library.SSD1306_I2C(width=128, height=64, i2c=i2c, addr=0x3c)  # live
+oled2 = oled_library.SSD1306_I2C(width=128, height=64, i2c=i2c, addr=0x3d)  # initial
 
 # --- WiFi ---
 WIFI_SSID     = "Wokwi-GUEST"
@@ -30,7 +32,7 @@ WIFI_PASSWORD = ""
 
 # --- Firebase ---
 FIREBASE_DB  = "https://iotproject-d752a-default-rtdb.firebaseio.com"
-FIREBASE_SECRET = "YOUR_FIREBASE_DATABASE_SECRET"
+FIREBASE_SECRET = "AOhH8jRcbcfVU3VpQWr89veXMqE4LmE3mQoTSTay"
 FIREBASE_URL = FIREBASE_DB + "/sensor_data.json?auth=" + FIREBASE_SECRET
 
 # --- Thresholds ---
@@ -191,8 +193,9 @@ fruit_index, storage_time = load_state()
 fruit_index = select_fruit_on_boot(fruit_index)
 save_state(fruit_index, storage_time)
 
-alert_ack = True
-last_btn  = 1
+alert_ack    = True
+last_btn     = 1
+prev_snap    = None  # holds previous reading for oled2
 
 # --- Main Loop ---
 while True:
@@ -266,25 +269,61 @@ while True:
     save_state(fruit_index, storage_time)
 
     fruit_label = fruit[0].upper() + fruit[1:]
+
+    # --- Previous OLED (oled2) ---
+    if prev_snap is None:
+        oled2.fill(0)
+        oled2.text("PREV " + fruit_label, 0, 0)
+        oled2.text("Waiting for", 0, 20)
+        oled2.text("next reading...", 0, 32)
+        oled2.show()
+    else:
+        pt, ph, pg, pe, pst = prev_snap
+        oled2.fill(0)
+        oled2.text("PREV " + fruit_label, 0, 0)
+        oled2.text("T:{:.1f}C H:{:.0f}%".format(pt, ph), 0, 14)
+        oled2.text("G:{} E:{:.1f}C".format(pg, pe), 0, 26)
+        oled2.text("St:{:.1f}h".format(pst), 0, 38)
+        oled2.show()
+
+    # --- Live OLED (oled1) ---
     oled.fill(0)
-    oled.text("FG " + fruit_label, 0, 0)
-    oled.text("T:{:.1f}C H:{:.0f}%".format(temp, hum), 0, 12)
-    oled.text("G:{} E:{:.1f}C".format(gas, ext_temp), 0, 24)
-    oled.text("St:{}h HL:{:.0f}".format(storage_time, heat_load), 0, 36)
-    oled.text(status_msg, 0, 50)
-    oled.text("{}".format("OK" if pushed else "--"), 100, 50)
+    oled.text("LIVE " + fruit_label, 0, 0)
+    oled.text("T:{:.1f}C H:{:.0f}%".format(temp, hum), 0, 14)
+    oled.text("G:{} E:{:.1f}C".format(gas, ext_temp), 0, 26)
+    oled.text("St:{:.1f}h HL:{:.0f}".format(storage_time, heat_load), 0, 38)
+    oled.text(status_msg + " " + ("OK" if pushed else "--"), 0, 52)
     oled.show()
 
-    print("[{}] T:{} H:{} G:{} St:{}h Push:{} Status:{} WiFi:{}".format(
-        fruit.upper(), temp, hum, gas, storage_time, pushed, status_msg, wifi_connected
-    ))
+    # --- Serial Monitor ---
+    print("\n==== FreshGuard [{}] ====".format(fruit.upper()))
+    if prev_snap is None:
+        print("              PREV       NOW")
+        print("Temp (C)   :       --   {:>7.1f}".format(temp))
+        print("Humidity(%):       --   {:>7.1f}".format(hum))
+        print("Gas (ppm)  :       --   {:>7d}".format(gas))
+        print("Ext Temp(C):       --   {:>7.1f}".format(ext_temp))
+        print("Storage (h):       --   {:>7.1f}".format(storage_time))
+    else:
+        pt, ph, pg, pe, pst = prev_snap
+        print("              PREV       NOW")
+        print("Temp (C)   : {:>7.1f}  {:>7.1f}".format(pt, temp))
+        print("Humidity(%): {:>7.1f}  {:>7.1f}".format(ph, hum))
+        print("Gas (ppm)  : {:>7d}  {:>7d}".format(pg, gas))
+        print("Ext Temp(C): {:>7.1f}  {:>7.1f}".format(pe, ext_temp))
+        print("Storage (h): {:>7.1f}  {:>7.1f}".format(pst, storage_time))
+    print("Status     : {}  |  WiFi:{}".format(status_msg, wifi_connected))
+
+    # --- Shift current to previous ---
+    prev_snap = (temp, hum, gas, ext_temp, storage_time)
 
     # Poll button every 100ms during 2s wait — never misses a press
     for _ in range(20):
         b = button.value()
         if b == 0 and last_btn == 1:
-            fruit_index = (fruit_index + 1) % 2
-            alert_ack   = True
+            fruit_index  = (fruit_index + 1) % 2
+            alert_ack    = True
+            prev_snap = None   # reset so new fruit starts fresh
             save_state(fruit_index, storage_time)
             utime.sleep_ms(300)
             last_btn = 1
